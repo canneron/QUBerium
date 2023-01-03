@@ -1,5 +1,6 @@
 from uuid import uuid4
-import rsa
+from blockchain import Blockchain
+from wallet import Wallet
 import threading
 
 class Node:
@@ -7,7 +8,8 @@ class Node:
         self.id = str(uuid4()).replace("-", "")
         self.ip = ip
         self.port = port
-        self.pubKey, self.privKey = rsa.newkeys(2048)
+        self.bchain = Blockchain()
+        self.wallet = Wallet()
         bThread = threading.Thread(target=self.broadcast, args=self, daemon=True)
         lThread = threading.Thread(target=self.listener, args=self, daemon=True)
         sThread = threading.Thread(target=self.sender, args=self, daemon=True)
@@ -15,7 +17,7 @@ class Node:
         lThread.start
         bThread.start
         sThread.start
-        
+    
     def broadcast(self):
         x = 1
 
