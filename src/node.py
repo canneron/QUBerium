@@ -1,38 +1,26 @@
 from uuid import uuid4
-from cryptography.hazmat.primitives.asymmetric import rsa
-from cryptography.hazmat.primitives import serialization
+import rsa
+import threading
 
 class Node:
     def __init__(self, ip, port):
         self.id = str(uuid4()).replace("-", "")
         self.ip = ip
         self.port = port
-        self.generateKeys()
+        self.pubKey, self.privKey = rsa.newkeys(2048)
+        bThread = threading.Thread(target=self.broadcast, args=self, daemon=True)
+        lThread = threading.Thread(target=self.listener, args=self, daemon=True)
+        sThread = threading.Thread(target=self.sender, args=self, daemon=True)
         
-    def generateKeys(self):
-        privKey = rsa.generate_private_key(
-            public_exponent=65537,
-            key_size=2048
-        )
+        lThread.start
+        bThread.start
+        sThread.start
         
-        
-        encrypted_pem_private_key = privKey.private_bytes(
-            encoding=serialization.Encoding.PEM,
-            format=serialization.PrivateFormat.PKCS8,
-            encryption_algorithm=serialization.BestAvailableEncryption(private_key_pass)
-        )
+    def broadcast(self):
+        x = 1
 
-        pem_public_key = privKey.public_key().public_bytes(
-        encoding=serialization.Encoding.PEM,
-        format=serialization.PublicFormat.SubjectPublicKeyInfo
-        )
-
+    def listener(self):
+        x = 2
         
-        privKeyFile = open("example-rsa.pem", "w")
-        privKeyFile.write(encrypted_pem_private_key.decode())
-        privKeyFile.close()
-
-        pubKeyFile = open("example-rsa.pub", "w")
-        pubKeyFile.write(pem_public_key.decode())
-        pubKeyFile.close()
-        
+    def sender(self):
+        x = 3
