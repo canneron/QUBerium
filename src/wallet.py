@@ -1,19 +1,28 @@
 import rsa
 from block import Block
 from node import Node
+from transaction import Transaction
 
 class Wallet:
     def __init__(self):
         self.pubKey, self.privKey = rsa.newkeys(1024)
         self.balance = 0
         
-    def createBlock(self, node, bData):
-        encData = self.hashData(bData)
-        nBlock = Block(node.bchain.chainLength(), encData, node.bchain.chain[-1].hash, self.pubKey)
+    def createTransaction(self, receiver, amount, type, bData = None):
+        if bData != None:
+            bData = self.hashData(bData)
+        nTransaction = Transaction(self.pubKey, receiver, amount, bData, type)
+        sig = self.sigSign(nTransaction.transactionAsString().encode('utf-8'))
+        nTransaction.signTransaction(sig)
+        return nTransaction
+    
+    def createBlock(self, node, transaction):
+        nBlock = Block(transaction,node.bchain.chainLength(), node.bchain.chain[-1].hash, self.pubKey)
         sig = self.sigSign(nBlock.blockAsString().encode('utf-8'))
         nBlock.copyBAS()
         nBlock.signBlock(sig)
         node.bchain.addBlock(nBlock)
+        return Block
         
     def hashData(self, data):
         data.encode('utf-8')
@@ -32,3 +41,5 @@ class Wallet:
         else:
             return False
         
+    def updateBalance(self, amount):
+        self.balance += amount
