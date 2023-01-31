@@ -16,8 +16,8 @@ class Wallet:
         nTransaction.signTransaction(sig)
         return nTransaction
     
-    def createBlock(self, node, transaction):
-        nBlock = Block(transaction,node.bchain.chainLength(), node.bchain.chain[-1].hash, self.pubKey)
+    def createBlock(self, node, transactions):
+        nBlock = Block(transactions ,node.bchain.chainLength(), node.bchain.chain[-1].hash, self.pubKey)
         sig = self.sigSign(nBlock.blockAsString().encode('utf-8'))
         nBlock.copyBAS()
         nBlock.signBlock(sig)

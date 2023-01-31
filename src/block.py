@@ -3,8 +3,8 @@ import time
 
 
 class Block:
-    def __init__(self, transaction, index, prevhash, validator):
-        self.transaction = transaction
+    def __init__(self, transactions, index, prevhash, validator):
+        self.transactions = transactions
         self.index = index
         self.timestamp = time.time_ns()
         self.prevhash = prevhash
@@ -22,7 +22,16 @@ class Block:
         self.signature = signature
         
     def blockAsString(self):
-        return f"{self.transaction}{self.index}{self.timestamp}{self.prevhash}{self.validator}{self.signature}"
+        bas = ''
+        for tx in self.transactions:
+            bas += tx
+        bas += self.index + self.timestamp + self.prevhash + self.validator + self.signature
+        return bas
+            
         
     def copyBAS(self):
-        self.basOriginalCopy = f"{self.transaction}{self.index}{self.timestamp}{self.prevhash}{self.validator}{self.signature}"
+        bas = ''
+        for tx in self.transactions:
+            bas += tx
+        bas += self.index + self.timestamp + self.prevhash + self.validator + self.signature
+        self.basOriginalCopy = bas
