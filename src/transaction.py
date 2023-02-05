@@ -1,9 +1,10 @@
+import json
 import time
 from uuid import uuid4
 
 
 class Transaction:
-    def __init__(self, sender, receiver, amount, data, type):
+    def __init__(self, sender, receiver, amount, type, data = None):
         self.senderPK  = sender
         self.receiverPK = receiver
         self.amount = amount
@@ -14,8 +15,12 @@ class Transaction:
         self.tSig = ''
         self.tasOriginalCopy = ''
     
-    def printData(self):
-        self.data.readGrades()
+    def toJson(self):
+         return json.dumps(self, indent = 4, default=lambda o: o.__dict__)
+     
+    def setTX(self, id, ts):
+        self.tId = id
+        self.ts = self.tTimestamp
         
     def signTransaction(self, sig):
         self.tSig = sig

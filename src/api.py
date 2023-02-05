@@ -1,3 +1,4 @@
+import json
 from flask import Flask, request
 from flask_classful import FlaskView, route 
 
@@ -19,14 +20,12 @@ class API(FlaskView):
         
     @route('/blockchain', methods=['GET'])
     def viewBlockchain(self):
-        return node.bchain.chainLength(), 200
+        return node.bchain.toJson(), 200
     
     @route('transaction', methods=['POST'])
     def postTransaction(self):
-        txs = request.get_json
-        if not 'transaction' in txs:
-            return "Incorrect format", 400
-        # rewrrite everything as a json
-        # try to implement json or commit to
+        tx = request.get_json
+        if not 'transaction' in tx:
+            return "Incorrect format, JSON needed", 400
         node.addToChain(tx)
         return 201

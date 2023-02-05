@@ -1,8 +1,11 @@
+from hashlib import sha256
 import random
+import time
 
 class PoS:
-    def __init__(self):
+    def __init__(self, pk, stake):
         self.nodes = {}
+        self.nodes[pk] = stake
         
     def addNode(self, validator, stake):
         if validator not in list(self.nodes.keys()):
@@ -25,20 +28,20 @@ class PoS:
     def getStake(self, val):
         return self.nodes[val]
     
-    def generateValidator(self):
-        pool = 0
-        for v in self.nodes.keys():
-            pool += self.nodes[v]
-        winner = random.randrange(0, pool)
-        winnerpool = 0
-        for v in self.nodes.keys():
-            winnerpool += self.nodes[v]
-            if winnerpool > winner:
-                print("Validator chosen: ", v)
-                return v
-        print("No validator chosen")
-        return None
-        
-# Notes
-# Doesn't have to be true p2p - you can use a client list if needed but try to use p2pnetwork package
-# Focus on making consensus the best it can be as that's the important bit
+    def generateValidator(self, lastHash):
+        pool = {}
+        for staker in self.nodes.keys():
+            for chance in range(0,...,self.nodes[staker]):
+                guessStr = "" + staker + chance
+                guess = int(sha256(guessStr).hexdigest())
+                pool[guess] = staker
+        targetNum = int(sha256(lastHash))
+        nearestGuess = None
+        for guess in pool.keys():
+            if nearestGuess == None:
+                nearestGuess == guess
+            else:
+                if abs(guess - targetNum) < abs(nearestGuess - targetNum):
+                    nearestGuess = guess
+        print("Winner is: " + pool[nearestGuess])
+        return pool[nearestGuess]
