@@ -1,3 +1,6 @@
+import json
+
+
 class NodeInfo:
     def __init__(self, ip, port, id, pmLvl):
         self.ip = ip
