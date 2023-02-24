@@ -9,4 +9,11 @@ class NodeInfo:
         self.pmLvl = pmLvl
         
     def toJson(self):
-         return json.dumps(self, indent = 4, default=lambda o: o.__dict__)
+        jsonRep = {}
+        jsonRep['ip'] = self.ip
+        jsonRep['port'] = self.port
+        jsonRep['id'] = self.id
+        jsonRep['pmLvl'] = self.pmLvl
+        jsonRep = json.dumps(jsonRep)
+        jsonRep = jsonRep.encode('utf-8')
+        return jsonRep

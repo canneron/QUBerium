@@ -16,19 +16,32 @@ class Transaction:
         self.tasOriginalCopy = ''
     
     def toJson(self):
-         return json.dumps(self, indent = 4, default=lambda o: o.__dict__)
+        jsonRep = {}
+        jsonRep['sendPKE'] = self.senderPK.e
+        jsonRep['sendPKN'] = self.senderPK.n
+        jsonRep['receiverPKE'] = self.receiverPK.e
+        jsonRep['receiverPKN'] = self.receiverPK.n
+        jsonRep['amount'] = self.amount
+        jsonRep['data'] = self.data.toDict()
+        jsonRep['type'] = self.type
+        jsonRep['tId'] = self.tId
+        jsonRep['tTimestamp'] = self.tTimestamp
+        jsonRep['tSig'] = self.tSig
+        jsonRep = json.dumps(jsonRep)
+        return jsonRep
      
     def setTX(self, id, ts):
         self.tId = id
-        self.ts = self.tTimestamp
+        self.tTimestamp = ts
         
     def signTransaction(self, sig):
         self.tSig = sig
         
     def transactionAsString(self):
-        tas = f"{self.senderPK}{self.receiverPK}{self.amount}{self.data}{self.type}{self.tId}{self.tTimestamp}{self.tSig}"
+        tas = f"{self.senderPK.e}{self.senderPK.n}{self.receiverPK.e}{self.receiverPK.n}{self.amount}{self.data}{self.type}{self.tId}{self.tTimestamp}{self.tSig}"
         self.copyTAS()
+        tas.encode('utf-8')
         return tas
         
     def copyTAS(self):
-        self.tasOriginalCopy = f"{self.senderPK}{self.receiverPK}{self.amount}{self.data}{self.type}{self.tId}{self.tTimestamp}{self.tSig}"
+        self.tasOriginalCopy = f"{self.senderPK.e}{self.senderPK.n}{self.receiverPK.e}{self.receiverPK.n}{self.amount}{self.data}{self.type}{self.tId}{self.tTimestamp}{self.tSig}"

@@ -1,3 +1,6 @@
+import json
+
+
 class TxPool:
     def __init__(self):
         self.txs = []
@@ -12,13 +15,15 @@ class TxPool:
                 return False
         return True
     
-    def removeTxsFromPool(self, txs):
+    def updatePool(self, txs):
+        updatedPool = []
         for t in txs:
-            if t in self.txs:
-                self.txs.remove(t)
+            if not t in self.txs:
+                updatedPool.append(t)
+        self.txs = updatedPool
         
     def isNotEmpty(self):
-        if self.txs.len() > 0:
+        if len(self.txs) > 0:
             return True
         else:
             return False
