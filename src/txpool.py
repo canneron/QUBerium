@@ -17,8 +17,12 @@ class TxPool:
     
     def updatePool(self, txs):
         updatedPool = []
+        keep = True
         for t in txs:
-            if not t in self.txs:
+            for pooltx in self.txs:
+               if t.tId == pooltx.tId and t.tTimestamp == pooltx.tTimestamp and t.tSig == pooltx.tSig:
+                   keep = False
+            if keep:
                 updatedPool.append(t)
         self.txs = updatedPool
         

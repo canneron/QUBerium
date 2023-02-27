@@ -22,12 +22,15 @@ class Transaction:
         jsonRep['receiverPKE'] = self.receiverPK.e
         jsonRep['receiverPKN'] = self.receiverPK.n
         jsonRep['amount'] = self.amount
-        jsonRep['data'] = self.data.toDict()
+        if self.data == None:
+            jsonRep['data'] = self.data
+        else:
+            jsonRep['data'] = self.data.toDict()
         jsonRep['type'] = self.type
         jsonRep['tId'] = self.tId
         jsonRep['tTimestamp'] = self.tTimestamp
         jsonRep['tSig'] = self.tSig
-        jsonRep = json.dumps(jsonRep)
+        jsonRep = json.dumps(jsonRep, indent=4)
         return jsonRep
      
     def setTX(self, id, ts):

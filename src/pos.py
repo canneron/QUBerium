@@ -30,7 +30,10 @@ class PoS:
             
     def getStake(self, val):
         key = val.e + val.n
-        return self.nodes[key]
+        if key in list(self.nodes.keys()):
+            return self.nodes[key]
+        else:
+            return 0
     
     def generateValidator(self, lastHash):
         pool = {}
