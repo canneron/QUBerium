@@ -12,6 +12,10 @@ import threading
 from p2pnetwork.node import Node
 from nodeinfo import NodeInfo
 
+# This class acts as the main hub of the blockchain
+# It acts as the node and the top layer of the blockchain program
+# The peer to peer functions are called and stored in this class alongside the node's information such as IP and Port
+# It also holds the users ID, permissions and instances of their wallet, blockchain and transaction pool
 class ValNode(Node):
     def __init__(self, ip, port, pLvl, nId):
         #Start peer to peer functions on node, initialise with parent class Node
@@ -39,7 +43,9 @@ class ValNode(Node):
         self.recordIndex = {}
         
         # Node tools - the blockchain copy of this node, its wallet, the transaction pool for this node, the API interface and the POS
-        self.kms = KMS()
+        # The KMS class holds a client for the AWS KMS service that is only accessible to admins for encrypting/decrypting data with a key stored in the amazon key vault
+        if self.permissionLvl == "admin":    
+            self.kms = KMS()
         self.bchain = Blockchain()
         self.txPool = TxPool()
         if self.permissionLvl == "admin":
@@ -51,6 +57,7 @@ class ValNode(Node):
         self.wallet.balance += 100
         self.consensus = PoS(self.wallet.pubKey, 1)
         self.wallet.balance -= 1
+        self.nodeKeys[self.wallet.pubKey] = self.nId
         # Start P2P search
         self.nodeDiscovery()      
         
@@ -81,6 +88,7 @@ class ValNode(Node):
                     if receiver == self.nodeKeys[key]:
                         # Create transaction and send it to other nodes
                         t = self.wallet.createTransaction(key, amount, "SENDTOKENS")
+                        self.incomingTransaction(t, t.tSig)
                         msgJson = t.toJson()
                         self.send_to_nodes(msgJson)
                         break
@@ -99,12 +107,12 @@ class ValNode(Node):
                         grade = input("Enter Grade: ")
                         modulegrades[module] = grade
                         askquit = input("Enter Another Module? Y/N")
-                        if (askquit == False):
+                        if (askquit == "N"):
                             quit = True
                     # Hold student data in an object
                     sd = StudentData(fname, sname, id, modulegrades)
                     record = self.wallet.createTransaction(self.wallet.pubKey, 0, "NEWRECORD", sd)
-                    self.incomingTransaction(record)
+                    self.incomingTransaction(record, record.tSig)
                     msgJson = record.toJson()
                     # Send created transaction to other nodes on network
                     self.send_to_nodes(msgJson)
@@ -117,15 +125,17 @@ class ValNode(Node):
                     sname = input("Enter Student Surname: ")
                     id = input("Enter Student ID: ")
                     searchResult = self.recordSearch(self.bchain.chain, id)
-                    searchResult['data'] = self.kms.decrypt(searchResult['data'])
                     if searchResult == None:
                         print("Student Record Not Found")
                     else:
                         print("Forename: ", searchResult['sForename'])
                         print("Surname: ", searchResult['sSurname'])
                         print("ID: ", searchResult['sId'])
-                        print("Modules: ", searchResult['sModules'])
-                        print("Grades: ", searchResult['sGrades'])
+                        print("------------")
+                        print("Module Grades")
+                        print("------------")
+                        for grade in searchResult['sGrades']:
+                            print(str(grade) + ": " + str(searchResult['sGrades'][grade]))
                 else:
                     print ("Insufficient privilege")
             # Allows a student to view their own records
@@ -155,6 +165,10 @@ class ValNode(Node):
     # Start the thread that contains the blockchain console UI
     def startFunctions(self):
         threading.Thread(target=self.keyboardListener).start()
+    
+    def nodeDiscovery(self):
+        if self.port != 5001:
+            self.connect_with_node('localhost', 5001)
             
     #Holds all necessary information on the node that is sent to any nodes that connect to it, including all its details and held nodes
     def nodeInformationPacket(self, connected_node):
@@ -168,17 +182,19 @@ class ValNode(Node):
         exNodes = []
         for a in self.knownAdmins:
             exNodes.append(self.knownAdmins[a].toJson())
+        print(exNodes)
         msgJson['adminNodes'] = exNodes
-        exNodes.clear()
+        stNodes = []
         for s in self.knownStudents:
-            exNodes.append(self.knownStudents[s].toJson())
-        msgJson['studentNodes'] = exNodes
+            stNodes.append(self.knownStudents[s].toJson())
+        msgJson['studentNodes'] = stNodes
         msgJson["pubKeyE"] = self.wallet.pubKey.e
         msgJson["pubKeyN"] = self.wallet.pubKey.n
-        msgJson['stake'] = self.consensus.getStake((self.wallet.pubKey.n + self.wallet.pubKey.e))
+        msgJson['stake'] = self.consensus.getStake(self.wallet.pubKey)
         jsonMsg = json.dumps(msgJson)
         newMsg = jsonMsg.encode('utf-8')
         self.send_to_node(connected_node, newMsg)
+        
     # Override p2p methods
     # Message back from receiving node (sent from original node to new one)
     def outbound_node_connected(self, connected_node):
@@ -193,27 +209,29 @@ class ValNode(Node):
     # Search nodes to determine if the inbound node is already known
     def searchNodes(self, list, msg):
         for xNode in list:
+            print(xNode)
             if list[xNode].ip == msg['ip'] and list[xNode].port == msg['port'] and list[xNode].nId == msg['nId']:
                 return False
         return True
     
     # Check to see if the list of nodes from the inbound node contains any that this node is not aware of and connect to them if so
-    def searchStoredNodes(self, list, msg):
+    def searchStoredNodes(self, list, nodelist, msg):
         newPeer = True
-        for student in msg['studentNodes']:
-            if self.ip == student['ip'] and self.port == student['port'] and self.nId == student['nId']:
+        for node in msg[nodelist]:
+            if self.ip == node['ip'] and self.port == node['port'] and self.nId == node['nId']:
                 newPeer = False
-            if len(self.knownStudents) > 0:
+            if len(list) > 0:
                 for xNode in list:
-                    if list[xNode].ip == student['ip'] and list[xNode].port == student['port'] and list[xNode].nId == student['nId']:
+                    if list[xNode].ip == node['ip'] and list[xNode].port == node['port'] and list[xNode].nId == node['nId']:
                         newPeer = False
             if newPeer:
-                self.connect_with_node(student['ip'], student['port'])
+                print("NEWPEER")
+                self.connect_with_node(node['ip'], node['port'])
                 
     # Create a new NodeInfo object
     def addNewNode(self, list, msg):
         list[msg['nId']] = NodeInfo(msg['ip'], msg['port'], msg['nId'], msg['pmLvl'])
-        list[msg['nId']] = msg['bal']
+        self.nodeBalances[msg['nId']] = msg['bal']
     
     # If node is new, take its information and store it
     def newNode(self, msg):
@@ -223,9 +241,9 @@ class ValNode(Node):
             newNode = False
         # Check stored nodes
         if msg['pmLvl'] == "admin":
-            newNode = self.searchNodes(self.knownAdmins.keys(), msg)
+            newNode = self.searchNodes(self.knownAdmins, msg)
         else:
-            newNode = self.searchNodes(self.knownStudents.keys(), msg)
+            newNode = self.searchNodes(self.knownStudents, msg)
         if newNode:
             # If new node, create a new NodeInfo object storing its details and add its details to the relevant dictionaries
             if msg['pmLvl'] == "student":                   
@@ -237,18 +255,36 @@ class ValNode(Node):
             self.nodeKeys[pubKey] = msg['nId']
             # Add node to staking if it has any coins staked
             if msg['stake'] > 0:
-                    self.consensus.addNode(msg['nId'], msg['stake'])
+                    self.consensus.addNode(pubKey, msg['stake'])
         # Search the node information sent from the connecting node to check for any new nodes
-        self.searchStoredNodes(self.knownAdmins, msg)
-        self.searchStoredNodes(self.knownStudents, msg)
+        self.searchStoredNodes(self.knownAdmins, 'adminNodes', msg)
+        self.searchStoredNodes(self.knownStudents, 'studentNodes', msg)
             
+    # Recreate transactions from incoming messages to operate on
+    def recreateTx(self, msg):
+        tx = Transaction(rsa.PublicKey(msg['sendPKN'],msg['sendPKE']), rsa.PublicKey(msg['receiverPKN'], msg['receiverPKE']), int(msg['amount']), msg['type'], msg['data'])
+        tx.setTX(msg['tId'], msg['tTimestamp'])
+        tx.tasOriginalCopy = msg['tasCopy']
+        tx.signTransaction(msg['tSig'])
+        tx.data.encode('latin-1')
+        if tx.type == "NEWRECORD":
+            tx.encrypted = True
+        return tx
+    
+    # Recreate blocks from incoming messages to operate on
+    def recreateBlock(self, msg, blockTxs):
+        block = Block(blockTxs, msg['index'], msg['prevhash'], rsa.PublicKey(msg['validatorN'], msg['validatorE']))
+        block.timestamp = msg['timestamp']
+        block.hash = msg['hash']
+        block.copyBAS()
+        block.signature = msg['signature']
+        return block
+    
     # If the message contains a coin transaction then handle it here
     def handleTxMessage(self, msg):
         # Recreate transaction from message contents
         # If the transaction is a new record is will contain the encrypted data containing the record
-        tx = Transaction(rsa.PublicKey(msg['sendPKN'],msg['sendPKE']), rsa.PublicKey(msg['receiverPKN'], msg['receiverPKE']), int(msg['amount']), msg['type'], msg['data'])
-        tx.setTX(msg['tId'], msg['tTimestamp'])
-        tx.copyTAS()
+        tx = self.recreateTx(msg)
         # Check that the transaction is valid and can be executed
         if self.checkTxValid(tx):
             # If valid, handle the transaction by adding it to the transaction pool
@@ -256,54 +292,125 @@ class ValNode(Node):
         else:
             print("Invalid Transaction")
             
+    # Handle incoming blocks
     def handleBlockMessage(self, msg):
         blockTxs = []
-        # Recreate transactions
-        for transaction in msg['transactions']:
-            jsonTx = json.loads(transaction)
-            tx = Transaction(rsa.PublicKey(jsonTx['sendPKN'], jsonTx['sendPKE']), rsa.PublicKey(jsonTx['receiverPKN'], jsonTx['receiverPKE']), int(jsonTx['amount']), jsonTx['type'], jsonTx['data'])
-            tx.setTX(jsonTx['tId'], jsonTx['tTimestamp'])
-            tx.signTransaction(jsonTx['tSig'])
-            tx.copyTAS()
-            blockTxs.append(tx)
-        block = Block(blockTxs, msg['index'], msg['prevhash'], rsa.PublicKey(msg['validatorN'], msg['validatorE']))
-        block.timestamp = msg['timestamp']
-        block.hash = msg['hash']
-        block.copyBAS()
-        block.signature = msg['signature']
-        valid = None
-        if self.bchain.chainLength() == block.index:
-            if self.bchain.validateNewBlock(self.bchain.lastBlock(), block) and self.wallet.validateSig(block.basOriginalCopy, block.signature, block.validator) and self.validatorValid(block.validator):
-                valid = True
-            else:
-                valid = False
-        else:
+        # Check that the block is not already on the chain
+        if msg['index'] > self.bchain.lastBlock().index:
+            # Recreate transactions
+            for transaction in msg['transactions']:
+                jsonTx = json.loads(transaction)
+                tx = self.recreateTx(jsonTx)
+                blockTxs.append(tx)
+            block = self.recreateBlock(msg, blockTxs)
+            # Check that the incoming block is actually valid
             valid = False
-            if not self.validateChain():
-                msg = {}
-                msg['type'] = "CHAINREQ"
+            # Index should be the same as the amount of blocks on the chain before it is added
+            if self.bchain.chainLength() == (block.index):
+                # Check 1) the block's previous hash variable is equal to the hash of the last block on the chain
+                # Check 2) the block's signature is valid
+                # Check 3) the block's validator is valid by running an election under the same parameters and comparing results
+                if self.bchain.validateNewBlock(self.bchain.lastBlock(), block) and self.wallet.validateSig(block.basOriginalCopy, block.signature, block.validator) and self.validatorValid(block.validator):
+                    valid = True
+            else:
+                # If the block's index is incorrect attempt to validate the entire blockchain for errors
+                if not self.validateChain():
+                    # If there is an error send a request to other nodes for the correct chain
+                    msg = {}
+                    msg['type'] = "CHAINREQ"
+                    self.send_to_nodes(msg)
+            if valid:
+                # If valid retrieve the ID of the block's validator and reward them for being loyal by increasing their balance
+                validatorID = self.nodeKeys[block.validator]
+                self.nodeBalances[validatorID] += 1
+                # Add block to the chain
+                self.bchain.addInboundBlock(block)
+                for blockTx in block.transactions:
+                    self.handleTransaction(blockTx)
+                    #if blockTx.type == "NEWRECORD" and self.permissionLvl == "admin":
+                        #record = self.kms.decrypt(blockTx.data)
+                        #self.recordIndex[record['sId']] = block.index
+                # Transactions in the block must be removed from the transaction pool
+                self.txPool.updatePool(block.transactions)
+                # Forward the block to other nodes
+                blockMsg = block.toJson()
+                msg = blockMsg.encode('utf-8')
                 self.send_to_nodes(msg)
-        if valid:
-            validatorID = self.nodeKeys[block.validator]
-            self.nodeBalances[validatorID] += 1
-            self.bchain.addInboundBlock(block)
-            for blockTx in block.transactions:
-                self.handleTransaction(blockTx)
-                if blockTx.type == "NEWRECORD":
-                    self.recordIndex[blockTx.data.sId] = block.index
-            self.txPool.updatePool(block.transactions)
-            blockMsg = block.toJson()
-            msg = blockMsg.encode('utf-8')
-            self.send_to_nodes(msg)
-        else:
-            print("Invalid block detected! - Alerting Chain")
-            msg = {}
-            msg["type"] = "INVALIDBLOCK"
-            msg["id"] = self.nodeKeys[block.validator]
-            self.send_to_nodes(msg)  
+            else:
+                # If block is invalid alert the other nodes of the ID of the validator who produced it
+                # This ID is publicly displayed and added to a list for university authorities to deal with
+                print("Invalid block detected! - Alerting Chain")
+                msg = {}
+                msg["type"] = "INVALIDBLOCK"
+                msg["id"] = self.nodeKeys[block.validator]
+                self.send_to_nodes(msg)
+                print(str(msg['id']) + " has produced an invalid block") 
+                print("Their stake has been removed and ID recorded")
+                for pubKey in self.nodeKeys:
+                    if self.nodeKeys[pubKey] == msg['id']:
+                        # Node who produced an invalid block is punished by having their stake removed and burned  
+                        self.consensus.nodes[(pubKey.e + pubKey.n)] = 0
+                self.invalidCreatorIDs.append(msg['id'])
             
+    # Send a copy of this node's chain to another requesting it
+    def handleChainRequest(self, connected_node):
+        msg = {}
+        msg['type'] = "CHAINREP"
+        msg['blockchain'] = self.bchain.toJson()
+        self.send_to_node(connected_node, msg)
+            
+    # Take incoming chains and compare with your own to update to a new one
+    def handleChainReply(self, msg):
+        newchain = []
+        for cblock in msg['blockchain']:
+            jsonTx = json.loads(cblock)
+            blockTxs = []
+            for jsonTx in cblock['transactions']:
+                tx = self.recreateTx(jsonTx)
+                blockTxs.append(tx)
+            block = self.recreateBlock(cblock, blockTxs)
+            newchain.append(block)
+        self.updateToValidChain(newchain)
+    
+    # Punish nodes who have been found to be producing invalid blocks
+    def handleInvalidBlock(self, msg):
+        print(str(msg['id']) + " has produced an invalid block") 
+        print("Their stake has been removed and ID recorded")
+        for pubKey in self.nodeKeys:
+            if self.nodeKeys[pubKey] == msg['id']:  
+                self.consensus.nodes[(pubKey.e + pubKey.n)] = 0
+        self.invalidCreatorIDs.append(msg['id'])
+        
+    # Punish nodes who have been found to have an invalid chain copy
+    def handleInvalidBlock(self, msg):
+        print(str(msg['id']) + " has produced an invalid chain") 
+        print("Their stake has been removed and ID recorded")
+        for pubKey in self.nodeKeys:
+            if self.nodeKeys[pubKey] == msg['id']:  
+                self.consensus.nodes[(pubKey.e + pubKey.n)] = 0
+        self.invalidCreatorIDs.append(msg['id'])
+    
+    # When admins receive a request from students to send their decrypted records the admin must search for the student and then send them back
+    def handleRecordRequest(self, msg, connected_node):
+        result = self.recordSearch(self.bchain.chain, msg['sId'])
+        msg = {}
+        msg['type'] = "RECORDREP"
+        if result == None:
+            msg['record'] = "NONEFOUND"
+        else:
+            msg['record'] = result
+        self.send_to_node(connected_node, msg)
+        
+    # Returned records are printed in an easier to read form
+    def handleRecordReply(self, msg):
+        print("Forename: ", msg['sForename'])
+        print("Surname: ", msg['sSurname'])
+        print("ID: ", msg['sId'])
+        print("Modules: ", msg['sModules'])
+        print("Grades: ", msg['sGrades'])
+        
     # Handles incoming messages
-    def node_message(self, connected_node, msg): # types - INFO, TRANSACTION, NEWBLOCK, CHAINREQ, CHAINREP
+    def node_message(self, connected_node, msg):
         if msg['type'] == "NEWNODE":
             self.newNode(msg)
         elif msg['type'] == "SENDTOKENS" or msg['type'] == "ADDSTAKE" or msg['type'] == "SUBSTAKE" or msg['type'] == "NEWSTAKE" or msg['type'] == "NEWRECORD":
@@ -311,156 +418,125 @@ class ValNode(Node):
         elif msg['type'] == "BLOCK":
             self.handleBlockMessage(msg)
         elif msg['type'] == "CHAINREQ":
-            msg = {}
-            msg['type'] = "CHAINREP"
-            msg['blockchain'] = self.bchain.toJson()
-            self.send_to_node(connected_node, msg)
+            self.handleChainRequest(connected_node)
         elif msg['type'] == "CHAINREP":
-            newchain = []
-            for cblock in msg['blockchain']:
-                jsonTx = json.loads(cblock)
-                blockTxs = []
-                for transaction in cblock['transactions']:
-                    tx = Transaction(rsa.PublicKey(jsonTx['sendPKN'], jsonTx['sendPKE']), rsa.PublicKey(jsonTx['receiverPKN'], jsonTx['receiverPKE']), int(jsonTx['amount']), jsonTx['type'], jsonTx['data'])
-                    tx.setTX(jsonTx['tId'], jsonTx['tTimestamp'])
-                    tx.signTransaction(jsonTx['tSig'])
-                    tx.copyTAS()
-                    blockTxs.append(tx)
-                block = Block(blockTxs, cblock['index'], cblock['prevhash'], rsa.PublicKey(cblock['validatorN'], cblock['validatorE']))
-                block.timestamp = cblock['timestamp']
-                block.hash = cblock['hash']
-                block.copyBAS()
-                block.signature = cblock['signature']
-                newchain.append(block)
-            self.updateToValidChain(newchain)
+            self.handleChainReply(msg)
         elif msg['type'] == "INVALIDBLOCK":
-            print(msg['id'] + " has produced an invalidated block") 
-            print("Their stake has been removed and ID recorded")
-            self.consensus.nodes[msg['id']] = 0
-            self.invalidCreatorIDs.append[msg['id']]
+            self.handleInvalidBlock(msg)
+        elif msg['type'] == "INVALIDCHAIN":
+            self.handleInvalidChain(msg)
         elif msg['type'] == "RECORDRQ":
-            result = self.recordSearch(self.bchain.chain, msg['sId'])
-            decryptedData = self.kms.decrypt(result['data'])
-            result['data'] = decryptedData.decode('utf-8')
-            msg = {}
-            msg['type'] = "RECORDREP"
-            if result == None:
-                msg['record'] = "NONEFOUND"
-            else:
-                msg['record'] = result
-            self.send_to_node(connected_node, msg)
+            self.handleRecordRequest(msg, connected_node)
         elif msg['type'] == "RECORDREP":
-            print("Forename: ", msg['sForename'])
-            print("Surname: ", msg['sSurname'])
-            print("ID: ", msg['sId'])
-            print("Modules: ", msg['sModules'])
-            print("Grades: ", msg['sGrades'])
-            
-    def nodeDiscovery(self):
-        if self.port != 5001:
-            self.connect_with_node('localhost', 5001)
-        
-    def broadcaster(self):
-        while True:
-            x = 1
+            self.handleRecordReply(msg)
 
+    # Return wallet balance
     def getBalance(self):
         return self.wallet.balance
             
+    # Handle an incoming transaction
     def incomingTransaction(self, transaction, tSig):
         tData = transaction.tasOriginalCopy
         tSigner = transaction.senderPK
+        # Validate that the transaction's signature is valid and has not been forged
         validSig = self.wallet.validateSig(tData, tSig, tSigner)
         if validSig:
             transaction.signTransaction(tSig)
+        # Check the transaction is not in the transaction pool and not already in a block on the chain
         if transaction.tId not in self.txPool.txs and not self.bchain.isExistingTx(transaction.tId):
+            print ("TID: " + str(transaction.tId))
+            print(str(len(self.txPool.txs)))
+            print (str(self.bchain.isExistingTx(transaction.tId)))
             if validSig:
+                # If the transaction is valid add it to the pool and send it to other nodes
                 self.txPool.addTxToPool(transaction)
                 txMsg = transaction.toJson()
                 msg = txMsg.encode('utf-8')
-                self.send_to_nodes(msg) # add message for transaction
+                # Forward transaction to other nodes
+                self.send_to_nodes(msg)
+                # Check the transaction pool is not empty - if it is not then proceed to create a block to hold the transaction in
+                # This can be changed to hold n amount of transactions in a block, but for the purpose of this project n = 1
                 if self.txPool.isNotEmpty():
-                    validator = self.consensus.generateValidator(self.bchain.lastBlock().hash)                         
+                    # Hold a raffle to see which staker will be the validator for this block
+                    # See comments on the PoS class for more information
+                    validator = self.consensus.generateValidator(self.bchain.lastBlock().hash)   
                     if validator == None:
                         print("Error: No validator")
                     else:
+                        # If this node is the validator continue, otherwise wait for the validator to broadcast the block
                         if (self.wallet.pubKey.e + self.wallet.pubKey.n) == validator:
+                            # If validator create a new block and add it to the chain
                             newBlock = self.bchain.addLocalBlock(self.txPool.txs, self.wallet)
                             if newBlock == None:
-                                print("Error!")
+                                print("Error - no block created!")
                             else:
+                                # Handle each transaction in the block by executing it's function
                                 for blockTx in newBlock.transactions:
                                     self.handleTransaction(blockTx)
+                                # Remove the transactions held in the block from the transaction pool
                                 self.txPool.updatePool(newBlock.transactions)
-                                
+                                # Broadcast the block to other nodes
                                 blockMsg = newBlock.toJson()
                                 msg = blockMsg.encode('utf-8')
                                 self.send_to_nodes(msg)
                         else:
                             print("Not validator")
-
-                            
-    def checkTxValid(self, tx):
-        senderKey = tx.senderPK.e + tx.senderPK.n
-        receiveKey = tx.receiverPK.e + tx.receiverPK.n
-        myKey = self.wallet.pubKey.n + self.wallet.pubKey.e
-        if (senderKey in self.nodeBalances.keys() or senderKey == myKey) and (receiveKey in self.nodeBalances.keys() or receiveKey == myKey):
-            if tx.type == "NEWSTAKE":
-                if senderKey == myKey:
-                    if self.wallet.balance >= tx.amount : 
-                        return True
-                    else:
-                        print("Insufficient funds to stake")
-                        return False
-                else:
-                    if self.nodeBalances[senderKey] >= tx.amount : 
-                        return True
-                    else:
-                        print("Insufficient funds to stake")
-                        return False
-            elif tx.type == "ADDSTAKE":
-                if senderKey == myKey:
-                    if self.wallet.balance >= tx.amount : 
-                        return True
-                    else:
-                        print("Insufficient funds to add to stake")
-                        return False
-                else:
-                    if self.nodeBalances[senderKey] >= tx.amount : 
-                        return True
-                    else:
-                        print("Insufficient funds to add to stake")
-                        return False
-            elif tx.type == "SUBSTAKE":
-                if self.consensus[senderKey] >= tx.amount: 
-                    return True
-                else:
-                    print("Insufficient funds to withdraw")
-                    return False
-            elif tx.type == "SENDTOKENS":
-                if senderKey == myKey:
-                    if self.wallet.balance >= tx.amount : 
-                        return True
-                    else:
-                        print("Insufficient funds to send")
-                        return False
-                else:
-                    if self.nodeBalances[senderKey] >= tx.amount : 
-                        return True
-                    else:
-                        print("Insufficient funds to send")
-                        return False
-            elif tx.type == "NEWRECORD":
+    
+    # Check each transaction can actually be executed before being added to the block
+    # The amount being sent/staked should be more than the amount held in the respective users wallet                        
+    def handleTx(self, tx, senderKey, myKey, errorMsg):
+        if senderKey == myKey:
+            if self.wallet.balance >= tx.amount : 
                 return True
+            else:
+                print(errorMsg)
+                return False
         else:
-            print("Sender or Receiver not found")
+            if self.nodeBalances[senderKey] >= tx.amount : 
+                return True
+            else:
+                print("errorMsg")
+                return False
+    
+    # Check each transaction can actually be executed before being added to the block
+    # Amount being unstaked should be more than is being staked currently by the user
+    def handleSubStakeTx(self, tx, senderKey):
+        if self.consensus[senderKey] >= tx.amount: 
+            return True
+        else:
+            print("Insufficient funds to withdraw")
             return False
-            
-                            
-    def handleTransaction(self, tx):
+        
+    # Reformat public keys into strings    
+    def handleKeys(self, tx):
         senderKey = tx.senderPK.e + tx.senderPK.n
         receiveKey = tx.receiverPK.e + tx.receiverPK.n
-        myKey = self.wallet.pubKey.n + self.wallet.pubKey.e
+        myKey = self.wallet.pubKey.e + self.wallet.pubKey.n
+        return senderKey, receiveKey, myKey
+    
+    # Check each transaction can actually be executed before being added to the block depending on its type
+    # Also ensure that the sender/receiver actually exists on the network
+    def checkTxValid(self, tx):
+        senderKey, receiveKey, myKey = self.handleKeys(tx)
+        isValidTx = False
+        if (senderKey in self.nodeBalances.keys() or senderKey == myKey) and (receiveKey in self.nodeBalances.keys() or receiveKey == myKey):
+            if tx.type == "NEWSTAKE" or tx.type == "ADDSTAKE":
+                isValidTx = self.handleTx(tx, senderKey, myKey, "Insufficient funds to stake")
+            elif tx.type == "SUBSTAKE":
+                isValidTx = self.handleTx(tx, senderKey, myKey, "Insufficient funds to add to stake")
+            elif tx.type == "SUBSTAKE":
+                isValidTx = self.handleSubStakeTx(tx, senderKey)
+            elif tx.type == "SENDTOKENS":
+                isValidTx = self.handleTx(tx, senderKey, myKey, "Insufficient funds to send")
+            elif tx.type == "NEWRECORD":
+                isValidTx = True
+        else:
+            print("Sender or receiver not found")
+        return isValidTx
+            
+    # If transactions are valid, execute them                        
+    def handleTransaction(self, tx):
+        senderKey, receiveKey, myKey = self.handleKeys(tx)
         if tx.type == "NEWSTAKE":
             self.nodeBalances[senderKey] -= tx.amount
             self.consensus.addNode(tx.senderPK, tx.amount)
@@ -488,18 +564,27 @@ class ValNode(Node):
                 self.nodeBalances[receiveKey] += tx.amount
         elif tx.type == "NEWRECORD":
             print("New record added")
-        
+    
+    # Validate this nodes chain is correct
+    # The index of each block should follow on from the next one, and the hash chain should be intact    
     def validateChain(self):
         if (self.bchain.chainLength() > 1):
+            # Compare each block against the one after it to ensure integrity
             for b in range(0, len(self.bchain.chain) -1):
                 if self.bchain.validateNewBlock(self.bchain.chain[b], self.bchain.chain[b+1]):
                     continue
                 else:
+                    # If the chain is invalid the stake is removed as this node may be a risk of being untrustworthy
                     print("Invalid chain - Stake removed")
-                    self.consensus.nodes[self.nId] = 0
+                    self.consensus.nodes[(self.wallet.pubKey.e + self.wallet.pubKey.e)] = 0
+                    msg = {}
+                    msg["type"] = "INVALIDCHAIN"
+                    msg["id"] = self.nodeKeys[self.nId]
+                    self.send_to_nodes(msg)
                     return False
         return True
     
+    # Validate that the chain sent by other nodes is correct so the node does not update to another invalid chain
     def validateNewChain(self, chain):
         if (chain.chainLength() > 1):
             for b in range(0, len(chain) -1):
@@ -509,33 +594,40 @@ class ValNode(Node):
                     return False
         return True
     
+    # The new chain must not only be valid, but also as a principle longer than the existing chain for it to be replaced
+    # The genesis block's must be the same so the hashing chains can produce the same results for comparison
+    # If valid and longe replace the existing chain with the new one and remove transactions in the blocks from the transaction pool 
     def updateToValidChain(self, newChain):
         if self.validateNewChain(newChain) and newChain.len() > len(self.bchain.chain) and self.bchain.genesisBlock() == newChain[0]:
             self.bchain.chain = newChain  
             for block in newChain:
                 self.txPool.updatePool(block.transactions)
-            
+    
+    # Hold a raffle with the same seed in order to produce the winner locally and compare against the validator of the block sent by other nodes        
     def validatorValid(self, val):
-        if self.consensus.generateValidator(self.bchain.lastBlock().hash) == (val):
+        if self.consensus.generateValidator(self.bchain.lastBlock().hash) == (val.e + val.n):
             return True
         else:
             return False      
 
+    # Search for a students records based on their student ID
+    # Student may have multiple records on the chain, so return the latest one
     def recordSearch(self, chain, id):
         validTransaction = None
         validData = None
         for block in chain:
             for transaction in block.transactions:
                 if transaction.data != None:
-                    record = transaction.data.toDict()
+                    # The transaction is encrypted on the chain so the admin account must use their AWS KMS credentials and decrpyt it
+                    record = self.kms.decrypt(transaction.data)
                     if record['sId'] == id:
                         if validTransaction == None:
-                            validTransaction = transaction
+                            validData = record
                         else:
+                            # Check this is the newest record
                             if transaction.tTimestamp > validTransaction.tTimestamp:
-                                validTransaction = transaction
-        validData = validTransaction.data.toDict()
+                                validData = record
         return validData
-    
+    # Resend the broadcast message to a specified node as an emergency measure
     def resendBroadcast(self, nodePort):
         self.connect_with_node('localhost', nodePort)

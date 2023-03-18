@@ -1,6 +1,6 @@
 import json
 
-
+# Class for encapsulating student data
 class StudentData:
     def __init__(self, sForename, sSurname, sId, sModuleGrades):
         self.sForename = sForename
@@ -8,6 +8,7 @@ class StudentData:
         self.sId = sId
         self.sGrades = sModuleGrades
         
+    # Dictionary representation of each student
     def toDict(self):
         jsonRep = {}
         jsonRep['sForename'] = self.sForename
