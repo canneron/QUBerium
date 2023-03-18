@@ -121,8 +121,6 @@ class ValNode(Node):
             # Allows admins to search for a students records
             elif value == "search":
                 if self.permissionLvl == "admin":
-                    fname = input("Enter Student Foreame: ")
-                    sname = input("Enter Student Surname: ")
                     id = input("Enter Student ID: ")
                     searchResult = self.recordSearch(self.bchain.chain, id)
                     if searchResult == None:
@@ -436,14 +434,14 @@ class ValNode(Node):
             
     # Handle an incoming transaction
     def incomingTransaction(self, transaction, tSig):
-        tData = transaction.tasOriginalCopy
-        tSigner = transaction.senderPK
-        # Validate that the transaction's signature is valid and has not been forged
-        validSig = self.wallet.validateSig(tData, tSig, tSigner)
-        if validSig:
-            transaction.signTransaction(tSig)
         # Check the transaction is not in the transaction pool and not already in a block on the chain
         if transaction.tId not in self.txPool.txs and not self.bchain.isExistingTx(transaction.tId):
+            tData = transaction.tasOriginalCopy
+            tSigner = transaction.senderPK
+            # Validate that the transaction's signature is valid and has not been forged
+            validSig = self.wallet.validateSig(tData, tSig, tSigner)
+            if validSig:
+                transaction.signTransaction(tSig)
             print ("TID: " + str(transaction.tId))
             print(str(len(self.txPool.txs)))
             print (str(self.bchain.isExistingTx(transaction.tId)))
@@ -509,9 +507,9 @@ class ValNode(Node):
         
     # Reformat public keys into strings    
     def handleKeys(self, tx):
-        senderKey = tx.senderPK.e + tx.senderPK.n
-        receiveKey = tx.receiverPK.e + tx.receiverPK.n
-        myKey = self.wallet.pubKey.e + self.wallet.pubKey.n
+        senderKey = tx.senderPK
+        receiveKey = tx.receiverPK
+        myKey = self.wallet.pubKey
         return senderKey, receiveKey, myKey
     
     # Check each transaction can actually be executed before being added to the block depending on its type
@@ -519,7 +517,7 @@ class ValNode(Node):
     def checkTxValid(self, tx):
         senderKey, receiveKey, myKey = self.handleKeys(tx)
         isValidTx = False
-        if (senderKey in self.nodeBalances.keys() or senderKey == myKey) and (receiveKey in self.nodeBalances.keys() or receiveKey == myKey):
+        if (senderKey in self.nodeKeys.keys() or senderKey == myKey) and (receiveKey in self.nodeKeys.keys() or receiveKey == myKey):
             if tx.type == "NEWSTAKE" or tx.type == "ADDSTAKE":
                 isValidTx = self.handleTx(tx, senderKey, myKey, "Insufficient funds to stake")
             elif tx.type == "SUBSTAKE":
@@ -538,30 +536,37 @@ class ValNode(Node):
     def handleTransaction(self, tx):
         senderKey, receiveKey, myKey = self.handleKeys(tx)
         if tx.type == "NEWSTAKE":
-            self.nodeBalances[senderKey] -= tx.amount
+            id = self.nodeKeys[senderKey]
+            self.nodeBalances[id] -= tx.amount
             self.consensus.addNode(tx.senderPK, tx.amount)
         if tx.type == "ADDSTAKE":
             if senderKey == myKey:
                 self.wallet.balance -= tx.amount
             else:
-                self.nodeBalances[senderKey] -= tx.amount
+                id = self.nodeKeys[senderKey]
+                self.nodeBalances[id] -= tx.amount
             self.consensus.addStake(tx.senderPK, tx.amount)
         if tx.type == "SUBSTAKE":
             if senderKey == myKey:
                 self.wallet.balance -= tx.amount
             else:
-                self.nodeBalances[senderKey] += tx.amount
+                id = self.nodeKeys[senderKey]
+                self.nodeBalances[id] += tx.amount
             self.consensus.subStake(tx.senderPK, tx.amount)
         elif tx.type == "SENDTOKENS":
             if senderKey == myKey:
                 self.wallet.balance -= tx.amount
-                self.nodeBalances[receiveKey] += tx.amount
+                id = self.nodeKeys[receiveKey]
+                self.nodeBalances[id] += tx.amount
             elif receiveKey == myKey:
-                self.nodeBalances[senderKey] -= tx.amount
+                id = self.nodeKeys[senderKey]
+                self.nodeBalances[id] -= tx.amount
                 self.wallet.balance += tx.amount
             else:
-                self.nodeBalances[senderKey] -= tx.amount
-                self.nodeBalances[receiveKey] += tx.amount
+                id = self.nodeKeys[senderKey]
+                self.nodeBalances[id] -= tx.amount
+                id = self.nodeKeys[receiveKey]
+                self.nodeBalances[id] += tx.amount
         elif tx.type == "NEWRECORD":
             print("New record added")
     
@@ -619,7 +624,7 @@ class ValNode(Node):
             for transaction in block.transactions:
                 if transaction.data != None:
                     # The transaction is encrypted on the chain so the admin account must use their AWS KMS credentials and decrpyt it
-                    record = self.kms.decrypt(transaction.data)
+                    record = self.kms.decrypt(transaction.data.encode('latin-1'))
                     if record['sId'] == id:
                         if validTransaction == None:
                             validData = record
