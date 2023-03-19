@@ -37,7 +37,6 @@ class KMS:
 
     # Decrypt data and return as a JSON
     def decrypt(self, data):
-        print(data)
         text = self.kms.decrypt(
             KeyId=self.keyARN,
             CiphertextBlob=data,
