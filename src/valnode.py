@@ -140,14 +140,7 @@ class ValNode(Node):
                     if searchResult == None:
                         print("Student Record Not Found")
                     else:
-                        print("Forename: ", searchResult['sForename'])
-                        print("Surname: ", searchResult['sSurname'])
-                        print("ID: ", searchResult['sId'])
-                        print("------------")
-                        print("Module Grades")
-                        print("------------")
-                        for grade in searchResult['sGrades']:
-                            print(str(grade) + ": " + str(searchResult['sGrades'][grade]))
+                        self.printRecords(searchResult)
                 else:
                     print ("Insufficient privilege")
             # Allows a student to view their own records
@@ -356,9 +349,9 @@ class ValNode(Node):
                 self.bchain.addInboundBlock(block)
                 for blockTx in block.transactions:
                     self.handleTransaction(blockTx)
-                    #if blockTx.type == "NEWRECORD" and self.permissionLvl == "admin":
-                     #   record = self.kms.decrypt(blockTx.data)
-                      #  self.recordIndex[record['sId']] = block.index
+                    if blockTx.type == "NEWRECORD" and self.permissionLvl == "admin":
+                        record = self.kms.decrypt(blockTx.data.encode('latin-1'))
+                        self.recordIndex[record['sId']] = block.index
                 # Transactions in the block must be removed from the transaction pool
                 self.txPool.updatePool(block.transactions)
                 # Forward the block to other nodes
@@ -432,20 +425,24 @@ class ValNode(Node):
             msg['record'] = result
         self.send_to_node(connected_node, msg)
         
+    # Function for printing student records
+    def printRecords(self, record):
+        print("Forename: ", record['sForename'])
+        print("Surname: ", record['sSurname'])
+        print("ID: ", record['sId'])
+        print("------------")
+        print("Module Grades")
+        print("------------")
+        for grade in record['sGrades']:
+            print(str(grade) + ": " + str(record['sGrades'][grade]))
+                            
     # Returned records are printed in an easier to read form
     def handleRecordReply(self, msg):
         record = msg['record']
         if record == None:
             print("Records not found - please contact administrator")
         else:
-            print("Forename: ", record['sForename'])
-            print("Surname: ", record['sSurname'])
-            print("ID: ", record['sId'])
-            print("------------")
-            print("Module Grades")
-            print("------------")
-            for grade in record['sGrades']:
-                print(str(grade) + ": " + str(record['sGrades'][grade]))
+            self.printRecords(record)
         
     # Handles incoming messages
     def node_message(self, connected_node, msg):
@@ -658,6 +655,13 @@ class ValNode(Node):
     # Search for a students records based on their student ID
     # Student may have multiple records on the chain, so return the latest one
     def recordSearch(self, chain, id):
+        if id in self.recordIndex.keys():
+            index = self.recordIndex[id]
+            recordBlock = self.bchain.getBlock(index)
+            for tx in recordBlock.transactions:
+                record = self.kms.decrypt(tx.data.encode('latin-1'))
+                if record['sId'] == id:
+                    return tx.data
         validTransaction = None
         validData = None
         for block in chain:

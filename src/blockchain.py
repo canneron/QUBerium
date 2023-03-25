@@ -43,6 +43,9 @@ class Blockchain:
     def genesisBlock(self):
         return self.chain[0]
     
+    def getBlock(self, index):
+        return self.chain[index]
+    
     # Function for validating the integrity of a block by comparing it against its predecessor 
     def validateNewBlock(self, oldBlock, newBlock):
         # Check that the hash of the previous block is equal to the previous hash stored in the new one

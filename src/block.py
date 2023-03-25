@@ -53,11 +53,11 @@ class Block:
         
     def toJson(self):
         jsonRep = {}
+        jsonRep['index'] = self.index
         txs = []
         for n in self.transactions:
             txs.append(n.toJson())
         jsonRep['transactions'] = txs
-        jsonRep['index'] = self.index
         jsonRep['timestamp'] = self.timestamp
         jsonRep['prevhash'] = self.prevhash
         if (self.index == 0):
