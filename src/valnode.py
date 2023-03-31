@@ -19,14 +19,13 @@ from nodeinfo import NodeInfo
 class ValNode(Node):
     def __init__(self, ip, port, pLvl, nId):
         #Start peer to peer functions on node, initialise with parent class Node
-        print("STARTING")
-        super(ValNode, self).__init__(ip, port, id=nId)
-        self.start()
         # Node variables
         self.nId = nId
         self.ip = ip
         self.port = port
         self.permissionLvl = pLvl
+        self.end = False
+        self.command = None
         
         # Dictionaries and lists for node information
         # Holds information on known admin nodes against their IDs
@@ -46,34 +45,39 @@ class ValNode(Node):
         # The KMS class holds a client for the AWS KMS service that is only accessible to admins for encrypting/decrypting data with a key stored in the amazon key vault
         if self.permissionLvl == "admin":    
             self.kms = KMS()
+        else:
+            self.kms = None
         self.bchain = Blockchain()
         self.txPool = TxPool()
         if self.permissionLvl == "admin":
             self.wallet = Wallet(self.kms)
+            self.wallet.balance += 100
+            self.consensus = PoS(self.wallet.pubKey, 50)
+            self.wallet.balance -= 50
         else:
             self.wallet = Wallet()
+            self.wallet.balance += 20
+            self.consensus = PoS(self.wallet.pubKey, 5)
+            self.wallet.balance -= 5
+            # Variable for storing block that is being validated by admin
+            self.storedBlock = None
         
         # Initialise a balance and the consensus protocol
-        self.wallet.balance += 100
-        self.consensus = PoS(self.wallet.pubKey, 1)
-        self.wallet.balance -= 1
         self.nodeKeys[self.wallet.pubKey] = self.nId
-        # Start P2P search
-        self.nodeDiscovery()      
+          
         
     # Listens for input on console to interact with blockchain
     def keyboardListener(self):
         #listen for input here
-        exit = False
-        while exit == False:
+        while self.end == False:
             value = input("Enter a command:\n")
             # Prints the blockchain as a JSON
-            if value == "blockchain":
+            if value == "blockchain" or self.command == "blockchain":
                 print(self.bchain.toJson())
             # Prints the transaction pool as a JSON
-            elif value == "txpool":
+            elif value == "txpool" or self.command == "txpool":
                 print(self.txPool.txs)
-            elif value == "commands":
+            elif value == "commands" or self.command == "commands":
                 print("blockchain - View Blockchain")
                 print("txpool - View Transaction Pool")
                 print("balances - View your balance and the balance of other users")
@@ -87,13 +91,13 @@ class ValNode(Node):
                 print("resendbroadcast - Connect to a specified node")
                 print("quit - Shut down node and exit")
             # Prints the current balance of this node and of all other nodes connected
-            elif value == "balances":
+            elif value == "balances" or self.command == "balances":
                 print("Your Balance: ", str(self.wallet.balance))
                 print("----------------")
                 for id in self.nodeBalances:
                     print(str(id) + " : " + str(self.nodeBalances[id]))
             # Creates a transaction for sending coins to another node
-            elif value == "transaction":
+            elif value == "transaction" or self.command == "transaction":
                 print("Your Balance: ", str(self.wallet.balance))
                 amount = input("Enter Amount: ")
                 receiver = input("Enter Receiver ID: ")
@@ -108,7 +112,7 @@ class ValNode(Node):
                         break
                 print ("Receiver ID not found")
             # Create a new record to add to the chain
-            elif value == "newrecord":
+            elif value == "newrecord" or self.command == "newrecord":
                 # Users must have the privilege level of admin - students cannot add records to the chain
                 if self.permissionLvl == "admin":
                     fname = input("Enter Student Foreame: ")
@@ -133,7 +137,7 @@ class ValNode(Node):
                 else:
                     print("Insufficient privilege")
             # Allows admins to search for a students records
-            elif value == "search":
+            elif value == "search" or self.command == "search":
                 if self.permissionLvl == "admin":
                     id = input("Enter Student ID: ")
                     searchResult = self.recordSearch(self.bchain.chain, id)
@@ -144,7 +148,7 @@ class ValNode(Node):
                 else:
                     print ("Insufficient privilege")
             # Allows a student to view their own records
-            elif value == "myrecords":
+            elif value == "myrecords" or self.command == "myrecords":
                 if self.permissionLvl == "student":
                     # As the data is encrypted, students must send a request to all admins for a decrypted copy of their data
                     admins = []
@@ -160,30 +164,39 @@ class ValNode(Node):
                 else:
                     print("Please use search function to find student records")
             # View connected nodes
-            elif value == "connections":
+            elif value == "connections" or self.command == "connections":
                 print('Current Connections:')
                 for peer in self.knownAdmins:
                     print(str(self.knownAdmins[peer].ip) + ":" + str(self.knownAdmins[peer].port))
                 for peer in self.knownStudents:
                     print(str(self.knownStudents[peer].ip) + ":" + str(self.knownStudents[peer].port))
             # Broadcast again in case the original signal is missed
-            elif value == "resendbroadcast":
+            elif value == "resendbroadcast" or self.command == "resendbroadcast":
                 newport = input("Enter Student Foreame: ")
                 self.resendBroadcast(newport)
-            elif value == "exit":
+            elif value == "exit" or self.command == "exit":
                 print("Node shutting down")
                 self.node_request_to_stop()
                 self.stop()
-                exit = True
+                self.end = True
                                          
     # Start the thread that contains the blockchain console UI
     def startFunctions(self):
+        print("STARTING")
+        super(ValNode, self).__init__(self.ip, self.port, id=self.nId)
+        self.start()
+        # Start P2P search
+        self.nodeDiscovery()
         threading.Thread(target=self.keyboardListener).start()
     
     def nodeDiscovery(self):
         if self.port != 5001:
             self.connect_with_node('localhost', 5001)
             
+    def stopNode(self):
+        self.send = True
+        self.stop()
+        
     #Holds all necessary information on the node that is sent to any nodes that connect to it, including all its details and held nodes
     def nodeInformationPacket(self, connected_node):
         msgJson = {}
@@ -227,7 +240,6 @@ class ValNode(Node):
     # Search nodes to determine if the inbound node is already known
     def searchNodes(self, list, msg):
         for xNode in list:
-            print(xNode)
             if list[xNode].ip == msg['ip'] and list[xNode].port == msg['port'] and list[xNode].nId == msg['nId']:
                 return False
         return True
@@ -285,8 +297,8 @@ class ValNode(Node):
         tx.setTX(msg['tId'], msg['tTimestamp'])
         tx.tasOriginalCopy = msg['tasCopy']
         tx.signTransaction(msg['tSig'])
-        tx.data.encode('latin-1')
         if tx.type == "NEWRECORD":
+            tx.data.encode('latin-1')
             tx.encrypted = True
         return tx
     
@@ -344,7 +356,10 @@ class ValNode(Node):
             if valid:
                 # If valid retrieve the ID of the block's validator and reward them for being loyal by increasing their balance
                 validatorID = self.nodeKeys[block.validator]
-                self.nodeBalances[validatorID] += 1
+                if validatorID in self.knownStudents.keys():
+                    self.nodeBalances[validatorID] += 1
+                elif validatorID in self.knownAdmins.keys():
+                    self.nodeBalances[validatorID] += 2
                 # Add block to the chain
                 self.bchain.addInboundBlock(block)
                 for blockTx in block.transactions:
@@ -404,15 +419,6 @@ class ValNode(Node):
             if self.nodeKeys[pubKey] == msg['id']:  
                 self.consensus.nodes[(pubKey.e + pubKey.n)] = 0
         self.invalidCreatorIDs.append(msg['id'])
-        
-    # Punish nodes who have been found to have an invalid chain copy
-    def handleInvalidBlock(self, msg):
-        print(str(msg['id']) + " has produced an invalid chain") 
-        print("Their stake has been removed and ID recorded")
-        for pubKey in self.nodeKeys:
-            if self.nodeKeys[pubKey] == msg['id']:  
-                self.consensus.nodes[(pubKey.e + pubKey.n)] = 0
-        self.invalidCreatorIDs.append(msg['id'])
     
     # When admins receive a request from students to send their decrypted records the admin must search for the student and then send them back
     def handleRecordRequest(self, msg, connected_node):
@@ -443,7 +449,42 @@ class ValNode(Node):
             print("Records not found - please contact administrator")
         else:
             self.printRecords(record)
+            
+    def validateValidator(self, msg, connected_node):
+        blockTxs = []
+        blockMsg = msg['block']
+        for transaction in blockMsg['transactions']:
+            jsonTx = json.loads(transaction)
+            tx = self.recreateTx(jsonTx)
+            blockTxs.append(tx)
+        block = self.recreateBlock(blockMsg, blockTxs)
+        reply = {}
+        reply['type'] = "VALIDATEDBLOCK"
+        if self.bchain.validateNewBlock(self.bchain.lastBlock(), block) and self.wallet.validateSig(block.basOriginalCopy, block.signature, block.validator) and self.validatorValid(block.validator):
+            reply['valid'] = "TRUE"
+        else:
+            reply['valid'] = "FALSE"
+        self.send_to_node(connected_node, reply)
         
+    def studentBlockValidated(self, msg):
+        if self.storedBlock != None:
+            if msg['valid'] == "TRUE":
+                self.send_to_nodes(self.storedBlock)
+                self.storedBlock = None
+            else:
+                print("Invalid block detected! - Alerting Chain")
+                msg = {}
+                msg["type"] = "INVALIDBLOCK"
+                msg["id"] = self.nId
+                self.send_to_nodes(msg)
+                print(str(msg['id']) + " has produced an invalid block") 
+                print("Their stake has been removed and ID recorded")
+                for pubKey in self.nodeKeys:
+                    if self.nodeKeys[pubKey] == msg['id']:
+                        # Node who produced an invalid block is punished by having their stake removed and burned  
+                        self.consensus.nodes[(pubKey.e + pubKey.n)] = 0
+                self.invalidCreatorIDs.append(msg['id'])
+            
     # Handles incoming messages
     def node_message(self, connected_node, msg):
         if msg['type'] == "NEWNODE":
@@ -464,6 +505,10 @@ class ValNode(Node):
             self.handleRecordRequest(msg, connected_node)
         elif msg['type'] == "RECORDREP":
             self.handleRecordReply(msg)
+        elif msg['type'] == "STUDENTVALIDATION":
+            self.validateValidator(msg, connected_node)
+        elif msg['type'] == "VALIDATEDBLOCK":
+            self.studentBlockValidated(msg)
 
     # Return wallet balance
     def getBalance(self):
@@ -513,7 +558,20 @@ class ValNode(Node):
                                 # Broadcast the block to other nodes
                                 blockMsg = newBlock.toJson()
                                 msg = blockMsg.encode('utf-8')
-                                self.send_to_nodes(msg)
+                                if self.permissionLvl == "student":
+                                    valmsg = {}
+                                    valmsg['type'] = "STUDENTVALIDATION"
+                                    valmsg['block'] = msg
+                                    admins = []
+                                    self.storedBlock = msg
+                                    for adminKeys in self.knownAdmins.keys():
+                                        admins.append(str(adminKeys))
+                                    for adminnode in self.all_nodes:
+                                        if adminnode.id in admins:
+                                            self.send_to_node(adminnode, valmsg)
+                                            print("Block Sent To Admins For Validation")
+                                else:
+                                    self.send_to_nodes(msg)
                         else:
                             print("Not validator")
     
@@ -567,43 +625,44 @@ class ValNode(Node):
                 isValidTx = True
         else:
             print("Sender or receiver not found")
+        
         return isValidTx
             
     # If transactions are valid, execute them                        
     def handleTransaction(self, tx):
         senderKey, receiveKey, myKey = self.handleKeys(tx)
         if tx.type == "NEWSTAKE":
-            id = self.nodeKeys[senderKey]
+            id = self.nodeKeys[tx.senderPK]
             self.nodeBalances[id] -= tx.amount
             self.consensus.addNode(tx.senderPK, tx.amount)
         if tx.type == "ADDSTAKE":
             if senderKey == myKey:
                 self.wallet.balance -= tx.amount
             else:
-                id = self.nodeKeys[senderKey]
+                id = self.nodeKeys[tx.senderPK]
                 self.nodeBalances[id] -= tx.amount
             self.consensus.addStake(tx.senderPK, tx.amount)
         if tx.type == "SUBSTAKE":
             if senderKey == myKey:
                 self.wallet.balance -= tx.amount
             else:
-                id = self.nodeKeys[senderKey]
+                id = self.nodeKeys[tx.senderPK]
                 self.nodeBalances[id] += tx.amount
             self.consensus.subStake(tx.senderPK, tx.amount)
         elif tx.type == "SENDTOKENS":
             if senderKey == myKey:
                 self.wallet.balance -= tx.amount
-                id = self.nodeKeys[receiveKey]
+                id = self.nodeKeys[tx.receiverPK]
                 self.nodeBalances[id] += tx.amount
             elif receiveKey == myKey:
-                id = self.nodeKeys[senderKey]
+                id = self.nodeKeys[tx.senderPK]
                 self.nodeBalances[id] -= tx.amount
                 self.wallet.balance += tx.amount
             else:
-                id = self.nodeKeys[senderKey]
+                id = self.nodeKeys[tx.senderPK]
                 self.nodeBalances[id] -= tx.amount
-                id = self.nodeKeys[receiveKey]
-                self.nodeBalances[id] += tx.amount
+                id2 = self.nodeKeys[tx.receiverPK]
+                self.nodeBalances[id2] += tx.amount
         elif tx.type == "NEWRECORD":
             print("New record added")
     
@@ -621,7 +680,7 @@ class ValNode(Node):
                     self.consensus.nodes[(self.wallet.pubKey.e + self.wallet.pubKey.e)] = 0
                     msg = {}
                     msg["type"] = "INVALIDCHAIN"
-                    msg["id"] = self.nodeKeys[self.nId]
+                    msg["id"] = self.nId
                     self.send_to_nodes(msg)
                     return False
         return True
@@ -659,15 +718,19 @@ class ValNode(Node):
             index = self.recordIndex[id]
             recordBlock = self.bchain.getBlock(index)
             for tx in recordBlock.transactions:
+                if self.kms == None:
+                    return False
                 record = self.kms.decrypt(tx.data.encode('latin-1'))
                 if record['sId'] == id:
-                    return tx.data
+                    return record
         validTransaction = None
         validData = None
         for block in chain:
             for transaction in block.transactions:
                 if transaction.data != None:
                     # The transaction is encrypted on the chain so the admin account must use their AWS KMS credentials and decrpyt it
+                    if self.kms == None:
+                        return False
                     record = self.kms.decrypt(transaction.data.encode('latin-1'))
                     if record['sId'] == id:
                         if validTransaction == None:

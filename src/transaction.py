@@ -37,7 +37,7 @@ class Transaction:
         jsonRep['receiverPKN'] = self.receiverPK.n
         jsonRep['amount'] = self.amount
         # If encrypted the data will not be a StudentData object so must be sent as plaintext
-        if self.encrypted == True or self.encrypted == None:
+        if self.encrypted == True or self.data == None:
             jsonRep['data'] = self.data
         else:
             jsonRep['data'] = self.data.toDict()

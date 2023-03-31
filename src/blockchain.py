@@ -49,7 +49,7 @@ class Blockchain:
     # Function for validating the integrity of a block by comparing it against its predecessor 
     def validateNewBlock(self, oldBlock, newBlock):
         # Check that the hash of the previous block is equal to the previous hash stored in the new one
-        if newBlock.prevhash != oldBlock.hash:
+        if newBlock.prevhash != sha256(oldBlock.blockAsString().encode("utf-8")).hexdigest():
             print("Invalid Hash")
             return False
         # Check the index of the new block is consecutive with the old one
@@ -66,6 +66,7 @@ class Blockchain:
         # Retrun true if all checks are passed
         else:
             return True
+        
     # Check each transaction held in each block is not equal to any transactions held in the transaction pool to prevent duplicates and double spends
     def isExistingTx(self, txId):
         for block in self.chain:

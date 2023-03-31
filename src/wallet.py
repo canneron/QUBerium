@@ -32,6 +32,7 @@ class Wallet:
     # Creates a new block and signs it using the node's private key for other users to verify with the public key
     def createBlock(self, transactions, index, previousHash, validator):
         nBlock = Block(transactions, index, previousHash, validator)
+        nBlock.copyBAS()
         sig = self.sigSign(nBlock.blockAsString().encode('utf-8'))
         nBlock.signBlock(sig)
         return nBlock
@@ -45,5 +46,8 @@ class Wallet:
     
     # Updates a node's balance   
     def updateBalance(self, amount):
-        self.balance += amount
+        if self.balance + amount > 0:
+            self.balance += amount
+        else:
+            print ("Balance cannot go below 0")
 

@@ -36,7 +36,6 @@ class Block:
         for tx in self.transactions:
             bas += tx.transactionAsString()
         bas += str(self.index) + str(self.timestamp) + str(self.prevhash) + val + self.signature + self.type
-        self.copyBAS()
         bas.encode("utf-8")
         return bas
             

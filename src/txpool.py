@@ -26,6 +26,7 @@ class TxPool:
                    keep = False
             if keep:
                 updatedPool.append(t)
+            keep = True
         self.txs = updatedPool
         
     # Check the pool is not empty to decide when to add transactions to a block
