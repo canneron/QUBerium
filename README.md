@@ -1,8 +1,5 @@
 # QUBerium: An Environmentally Friendly Cryptocurrency for Queen's University Belfast
 
-## Name
-QUBerium: An Environmentally Friendly Cryptocurrency for Queen's University Belfast
-
 ## Description
 QUBerium is a peer-to-peer decentralised blockchain using a proof-of-stake consensus mechanism for storing and verifying student records. This project is designed to store records securely against internal and external attacks, with each record being verifiably correct and in a distributed manner, so that the network can continue under great strain.
 
@@ -20,9 +17,9 @@ json
 time
 threading
 hashlib
-boto3
-p2pnetwork
-rsa
+boto3==1.26.92
+p2pnetwork==1.2
+rsa==4.9
 
 For more information on versioning see requirements.txt
 
