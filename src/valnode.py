@@ -1,4 +1,5 @@
 import json
+import time
 import rsa
 from block import Block
 from blockchain import Blockchain
@@ -19,6 +20,9 @@ from nodeinfo import NodeInfo
 class ValNode(Node):
     def __init__(self, ip, port, pLvl, nId):
         #Start peer to peer functions on node, initialise with parent class Node
+        print("STARTING")
+        super(ValNode, self).__init__(ip, port, id=nId)
+        self.start()
         # Node variables
         self.nId = nId
         self.ip = ip
@@ -182,9 +186,7 @@ class ValNode(Node):
                                          
     # Start the thread that contains the blockchain console UI
     def startFunctions(self):
-        print("STARTING")
-        super(ValNode, self).__init__(self.ip, self.port, id=self.nId)
-        self.start()
+        
         # Start P2P search
         self.nodeDiscovery()
         threading.Thread(target=self.keyboardListener).start()

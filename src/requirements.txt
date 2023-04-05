@@ -1,0 +1,3 @@
+boto3==1.26.92
+p2pnetwork==1.2
+rsa==4.9

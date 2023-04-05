@@ -37,12 +37,16 @@ class Wallet:
         nBlock.signBlock(sig)
         return nBlock
     
-    # Validate that a signature on a transaction/block is real using the RSA library
+    # Validate that a signature on a transaction/block is real using the RSA library@
     # Verifying with the signature, the public key of the signer and the data used to sign it (store in the transaction/block) will return the encryption algorithm
     def validateSig(self, data, sig, sigPubKey):
         data = data.encode('utf-8')
-        if rsa.verify(data, bytes.fromhex(sig), sigPubKey) == "SHA-256":
-            return True
+        try:
+            if rsa.verify(data, bytes.fromhex(sig), sigPubKey) == "SHA-256":
+                return True
+        except:
+            print("Invalid Siganture!")
+            return False
     
     # Updates a node's balance   
     def updateBalance(self, amount):
