@@ -1,92 +1,112 @@
-# QUBerium
-
-
-
-## Getting started
-
-To make it easy for you to get started with GitLab, here's a list of recommended next steps.
-
-Already a pro? Just edit this README.md and make it your own. Want to make it easy? [Use the template at the bottom](#editing-this-readme)!
-
-## Add your files
-
-- [ ] [Create](https://docs.gitlab.com/ee/user/project/repository/web_editor.html#create-a-file) or [upload](https://docs.gitlab.com/ee/user/project/repository/web_editor.html#upload-a-file) files
-- [ ] [Add files using the command line](https://docs.gitlab.com/ee/gitlab-basics/add-file.html#add-a-file-using-the-command-line) or push an existing Git repository with the following command:
-
-```
-cd existing_repo
-git remote add origin https://gitlab.eeecs.qub.ac.uk/40233186/quberium.git
-git branch -M main
-git push -uf origin main
-```
-
-## Integrate with your tools
-
-- [ ] [Set up project integrations](https://gitlab.eeecs.qub.ac.uk/40233186/quberium/-/settings/integrations)
-
-## Collaborate with your team
-
-- [ ] [Invite team members and collaborators](https://docs.gitlab.com/ee/user/project/members/)
-- [ ] [Create a new merge request](https://docs.gitlab.com/ee/user/project/merge_requests/creating_merge_requests.html)
-- [ ] [Automatically close issues from merge requests](https://docs.gitlab.com/ee/user/project/issues/managing_issues.html#closing-issues-automatically)
-- [ ] [Enable merge request approvals](https://docs.gitlab.com/ee/user/project/merge_requests/approvals/)
-- [ ] [Automatically merge when pipeline succeeds](https://docs.gitlab.com/ee/user/project/merge_requests/merge_when_pipeline_succeeds.html)
-
-## Test and Deploy
-
-Use the built-in continuous integration in GitLab.
-
-- [ ] [Get started with GitLab CI/CD](https://docs.gitlab.com/ee/ci/quick_start/index.html)
-- [ ] [Analyze your code for known vulnerabilities with Static Application Security Testing(SAST)](https://docs.gitlab.com/ee/user/application_security/sast/)
-- [ ] [Deploy to Kubernetes, Amazon EC2, or Amazon ECS using Auto Deploy](https://docs.gitlab.com/ee/topics/autodevops/requirements.html)
-- [ ] [Use pull-based deployments for improved Kubernetes management](https://docs.gitlab.com/ee/user/clusters/agent/)
-- [ ] [Set up protected environments](https://docs.gitlab.com/ee/ci/environments/protected_environments.html)
-
-***
-
-# Editing this README
-
-When you're ready to make this README your own, just edit this file and use the handy template below (or feel free to structure it however you want - this is just a starting point!). Thank you to [makeareadme.com](https://www.makeareadme.com/) for this template.
-
-## Suggestions for a good README
-Every project is different, so consider which of these sections apply to yours. The sections used in the template are suggestions for most open source projects. Also keep in mind that while a README can be too long and detailed, too long is better than too short. If you think your README is too long, consider utilizing another form of documentation rather than cutting out information.
+# QUBerium: An Environmentally Friendly Cryptocurrency for Queen's University Belfast
 
 ## Name
-Choose a self-explaining name for your project.
+QUBerium: An Environmentally Friendly Cryptocurrency for Queen's University Belfast
 
 ## Description
-Let people know what your project can do specifically. Provide context and add a link to any reference visitors might be unfamiliar with. A list of Features or a Background subsection can also be added here. If there are alternatives to your project, this is a good place to list differentiating factors.
+QUBerium is a peer-to-peer decentralised blockchain using a proof-of-stake consensus mechanism for storing and verifying student records. This project is designed to store records securely against internal and external attacks, with each record being verifiably correct and in a distributed manner, so that the network can continue under great strain.
 
-## Badges
-On some READMEs, you may see small images that convey metadata, such as whether or not all the tests are passing for the project. You can use Shields to add some to your README. Many services also have instructions for adding a badge.
+This project is available from this repository, requiring an access request to the author.
 
-## Visuals
-Depending on what you are making, it can be a good idea to include screenshots or even a video (you'll frequently see GIFs rather than actual videos). Tools like ttygif can help, but check out Asciinema for a more sophisticated method.
+## Requirements
+This project should run on most systems. It has been benchmarked to run well on the following specification:
+HP 250 G7 Laptop
+CPU: Intel Core i3-7020U @2.3GHz Dual Core
+RAM: 8GB DDR3
+OS: Windows 10/Linux
+
+A python installation is required along with the following package dependencies:
+json
+time
+threading
+hashlib
+boto3
+p2pnetwork
+rsa
+
+For more information on versioning see requirements.txt
 
 ## Installation
-Within a particular ecosystem, there may be a common way of installing things, such as using Yarn, NuGet, or Homebrew. However, consider the possibility that whoever is reading your README is a novice and would like more guidance. Listing specific steps helps remove ambiguity and gets people to using your project as quickly as possible. If it only runs in a specific context like a particular programming language version or operating system or has dependencies that have to be installed manually, also add a Requirements subsection.
+1. Clone the repository to your local machine
+2. Using your command terminal of choice navigate to the cloned directory and to the /src directory containing 'main.py'
+3. Use the following command to launch the program: 'main.py <ip> <port> <permission level> <id>'
+    E.g. 'main.py localhost 5001 "admin" 40233186
+4. To verify the installation has been correct, you should see the following upon startup:
+![image.png](./image.png)
 
 ## Usage
-Use examples liberally, and show the expected output if you can. It's helpful to have inline the smallest example of usage that you can demonstrate, while providing links to more sophisticated examples if they are too long to reasonably include in the README.
+ADDING A NEW RECORD
+Prerequisite: Must be logged in as an administrator.
 
-## Support
-Tell people where they can go to for help. It can be any combination of an issue tracker, a chat room, an email address, etc.
+1.	Enter ‘newrecord’ when prompted.
+a.	If you are logged in as a student you should see “Insufficient Privilege” on the console
+2.	 Enter student details when prompted.
+a.	Enter the student’s forename.
+b.	Enter the student’s surname.
+c.	Enter the student’s ID.
+3.	For each of the modules and grades, add another by entering ‘Y’ when prompted, or ‘N’ to finish.
+4.	The user should see the string representation of the validator’s public key printed to the console.
+5.	When the message ‘New Record Added’ is displayed on the console the record has been added to the chain. Otherwise, if the block is deemed invalid:
+a.	The message ‘Invalid Block’ will be displayed, meaning that the block storing the new record has an issue.
+b.	If the block has been tampered with, the perpetrator’s ID will be printed to the console.
+c.	The reason for the block’s failure will also be printed e.g., “Invalid Hash”.
+6.	To verify the correctness of the operation, enter ‘blockchain’ in the command prompt.
+7.	The block’s data will be encrypted but the index and block information viewable as the newest block on the chain.
+8.	To check student data is correct use the search function, see section 5.2.
+----------------------------------------------------------------------------------------------------------------------
+SEARCHING FOR A STUDENT’S RECORD
+Prerequisite: Must be logged in as an administrator.
 
-## Roadmap
-If you have ideas for releases in the future, it is a good idea to list them in the README.
+1.	Enter ‘search’ when ‘Enter A Command:’ is displayed on the console.
+a.	If you are logged in as a student you should see “Insufficient Privilege” on the console
+2.	Enter the student’s ID when prompted.
+3.	If the student’s ID is stored on the blockchain then the record will be printed to the console
+a.	Otherwise, if no such student can be found “Student Record Not Found” will be printed
+----------------------------------------------------------------------------------------------------------------------
+VIEWING YOUR RECORD AS A STUDENT
+Prerequisite: Must be logged in as a student.
 
-## Contributing
-State if you are open to contributions and what your requirements are for accepting them.
-
-For people who want to make changes to your project, it's helpful to have some documentation on how to get started. Perhaps there is a script that they should run or some environment variables that they need to set. Make these steps explicit. These instructions could also be useful to your future self.
-
-You can also document commands to lint the code or run tests. These steps help to ensure high code quality and reduce the likelihood that the changes inadvertently break something. Having instructions for running tests is especially helpful if it requires external setup, such as starting a Selenium server for testing in a browser.
+1.	Enter ‘myrecords’ when ‘Enter A Command:’ is displayed on the console.
+a.	If you are logged in as an administrator, the user should see “Please Use The Search Function To Find Student Records” on the console
+2.	If the request is sent successfully the user will see “Request Sent” on the terminal
+3.	If found by the administrator node, the records will then be sent back to the user and printed
+a.	Otherwise, “Records Not Found – Please Contact Administrator” will be displayed.
+----------------------------------------------------------------------------------------------------------------------
+SENDING TOKENS TO OTHER NODES
+1.	Enter ‘transaction’ when prompted.
+2.	The users balance will be displayed along with a prompt asking how much to send. Enter the desired amount.
+3.	The terminal will then prompt the user for the ID of the user who will be receiving the tokens, enter this value into the terminal.
+a.	If the ID is not known to the user, “Receiver ID Not Found” will be printed.
+4.	To verify the transaction has been sent, enter ‘blockchain’ on the terminal.
+5.	The latest block in the blockchain should contain the transaction that has just been created.
+6.	To verify that it has executed correctly, enter ‘balances’.
+7.	The user’s balance should be their previous balance minus the amount sent.
+8.	The receiver’s balance should be their previous balance plus the amount received
 
 ## Authors and acknowledgment
-Show your appreciation to those who have contributed to the project.
+Author: Cameron McGreevy
+Acknowledgment to Ihsen Alouani for his help in creating and designing the project.
 
 ## License
-For open source projects, say how it is licensed.
+MIT License
 
-## Project status
-If you have run out of energy or time for your project, put a note at the top of the README saying that development has slowed down or stopped completely. Someone may choose to fork your project or volunteer to step in as a maintainer or owner, allowing your project to keep going. You can also make an explicit request for maintainers.
+Copyright (c) 2023 Cameron McGreevy
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
