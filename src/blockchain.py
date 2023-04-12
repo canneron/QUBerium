@@ -49,9 +49,6 @@ class Blockchain:
     # Function for validating the integrity of a block by comparing it against its predecessor 
     def validateNewBlock(self, oldBlock, newBlock):
         # Check that the hash of the previous block is equal to the previous hash stored in the new one
-        print("genesis ", self.genesisBlock().hash)
-        print(oldBlock.hash)
-        print(newBlock.prevhash)
         if newBlock.prevhash != oldBlock.hash:
             print("Invalid Hash")
             return False

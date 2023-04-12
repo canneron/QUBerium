@@ -64,5 +64,4 @@ class PoS:
                     nearestGuess = guess
         # The winner is the staker with the number closest to the target number, and their public key string is returned
         # Nodes with a bigger stake have a higher chance of winning, but each node can win
-        print("Winner is:", pool[nearestGuess])
         return pool[nearestGuess]

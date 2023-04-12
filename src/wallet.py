@@ -21,6 +21,7 @@ class Wallet:
     def createTransaction(self, receiver, amount, type, bData = None):
         nTransaction = Transaction(self.pubKey, receiver, amount, type, bData)
         sig = self.sigSign(nTransaction.transactionAsString().encode('utf-8'))
+        nTransaction.copyTAS()
         nTransaction.signTransaction(sig)
         if nTransaction.data != None and self.adminKey != None:
             nTransaction.data = nTransaction.data.toDict()

@@ -1178,12 +1178,5 @@ class TestValNode(unittest.TestCase):
         self.assertNotEqual(record, None)
         self.assertEqual(record, False)
         
-    #KeyboardListener at end
-    #Go back and do handleTxMessage after incomingTransaction and checkTxValid
-    #handleBlockMessage after validateChain, handleTransaction
-    #handleInboundBlockchain after updateToValidChain
-    #handleRecordRequest after recordSearch
-    #printRecords with keyboard listener
-    #handleRecordReply after printRecords
 if __name__ == '__main__':
     unittest.main()

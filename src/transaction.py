@@ -59,11 +59,10 @@ class Transaction:
         
     # Produces a string representation of the transaction for producing a digital signature
     def transactionAsString(self):
-        tas = f"{self.senderPK.e}{self.senderPK.n}{self.receiverPK.e}{self.receiverPK.n}{self.amount}{self.data}{self.type}{self.tId}{self.tTimestamp}{self.tSig}"
-        self.copyTAS()
+        tas = f"{self.senderPK.e}{self.senderPK.n}{self.receiverPK.e}{self.receiverPK.n}{self.amount}{str(self.data)}{self.type}{self.tId}{self.tTimestamp}{self.tSig}"
         tas.encode('utf-8')
         return tas
         
     # Copies string representation before the transaction is signed
     def copyTAS(self):
-        self.tasOriginalCopy = f"{self.senderPK.e}{self.senderPK.n}{self.receiverPK.e}{self.receiverPK.n}{self.amount}{self.data}{self.type}{self.tId}{self.tTimestamp}{self.tSig}"
+        self.tasOriginalCopy = f"{self.senderPK.e}{self.senderPK.n}{self.receiverPK.e}{self.receiverPK.n}{self.amount}{str(self.data)}{self.type}{self.tId}{self.tTimestamp}{self.tSig}"
