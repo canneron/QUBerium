@@ -107,9 +107,9 @@ class ValNode(Node):
                     if receiver == self.nodeKeys[key]:
                         # Create transaction and send it to other nodes
                         t = self.wallet.createTransaction(key, amount, "SENDTOKENS")
-                        self.incomingTransaction(t, t.tSig)
                         msgJson = t.toJson()
                         self.send_to_nodes(msgJson)
+                        self.incomingTransaction(t, t.tSig)
                         break
                 print ("Receiver ID not found")
             # Create a new record to add to the chain
@@ -131,10 +131,10 @@ class ValNode(Node):
                     # Hold student data in an object
                     sd = StudentData(fname, sname, id, modulegrades)
                     record = self.wallet.createTransaction(self.wallet.pubKey, 0, "NEWRECORD", sd)
-                    self.incomingTransaction(record, record.tSig)
                     msgJson = record.toJson()
                     # Send created transaction to other nodes on network
                     self.send_to_nodes(msgJson)
+                    self.incomingTransaction(record, record.tSig)
                 else:
                     print("Insufficient privilege")
             # Allows admins to search for a students records
