@@ -12,11 +12,12 @@ CPU: Intel Core i3-7020U @2.3GHz Dual Core
 RAM: 8GB DDR3
 OS: Windows 10/Linux
 
-A python installation is required along with the following package dependencies:
+A python 3 installation is required along with the following package dependencies:
 json
 time
 threading
 hashlib
+tkinter
 boto3==1.26.92
 p2pnetwork==1.2
 rsa==4.9
@@ -36,14 +37,14 @@ ADDING A NEW RECORD
 Prerequisite: Must be logged in as an administrator.
 1.	From the menu select the ‘Create Record’ button.
 2.	Enter the student’s information in the form provided.
-    a.	If extra space is needed to enter more modules and grades, press the ‘+’ button.
+a.	If extra space is needed to enter more modules and grades, press the ‘+’ button.
 3.	Once all records have been entered press ‘Submit’
 4.	The fields should then go blank, and the command line should print ‘New record added’.
 5.	To validate success, navigate back to the menu using ‘Return to Menu’.
 6.	Select ‘Blockchain’
 7.	Select the newest block.
 8.	Verify that details of your transaction have been added.
-    a.	Note, the record will be encrypted. To confirm the data has been entered correctly, search for the student’s records.
+a.	Note, the record will be encrypted. To confirm the data has been entered correctly, search for the student’s records.
 ----------------------------------------------------------------------------------------------------------------------
 SEARCHING FOR A STUDENT’S RECORD
 Prerequisite: Must be logged in as an administrator.
@@ -59,8 +60,8 @@ Prerequisite: Must be logged in as a student.
 
 1.	Select ‘My Records’ from the main menu.
 2.	The student records should now be displayed.
-    a.	If not, you may see a ‘Retrieving’ label. The software is waiting for the users records to be returned and this may take a moment.
-    b.	If the records cannot be found, ‘Records not found – please contact and administrator’ should be displayed and the instructions followed.
+a.	If not, you may see a ‘Retrieving’ label. The software is waiting for the users records to be returned and this may take a moment.
+b.	If the records cannot be found, ‘Records not found – please contact and administrator’ should be displayed and the instructions followed.
 
 ----------------------------------------------------------------------------------------------------------------------
 SENDING TOKENS TO OTHER NODES
@@ -72,7 +73,7 @@ SENDING TOKENS TO OTHER NODES
 6.	To verify success, navigate back to the main menu using ‘Return To Menu’.
 7.	Select the ‘Balances’ button.
 8.	The balance of each connected node will be displayed. Verify the correct amount has been deducted from one’s balance and been added to the recipient.
-    a.	NB. The balance of one of the nodes may differ slightly, as if chosen to be validator and they produce a successful block to store the transaction they will be rewarded in tokens.
+a.	NB. The balance of one of the nodes may differ slightly, as if chosen to be validator and they produce a successful block to store the transaction they will be rewarded in tokens.
 9.	Navigate back to the main menu and select ‘Blockchain’
 10.	Select the latest block and confirm the transaction stored inside is correct.
 
