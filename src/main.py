@@ -21,6 +21,7 @@ if __name__ == '__main__':
         node.cmd = True
         node.startFunctions()
     else:
-        tk = tkinter.Tk()
-        GUI(ip, port, pmLvl, id, tk)
-        tk.mainloop()
+        root = tkinter.Tk()
+        root.title("QUBerium")
+        GUI(ip, port, pmLvl, id, root)
+        root.mainloop()
