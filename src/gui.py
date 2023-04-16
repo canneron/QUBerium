@@ -68,7 +68,7 @@ class GUI(tkinter.Frame):
         resendBroadcastButton = tkinter.Button(row3, text="Resend Broadcast", command=self.resendBroadcast, **button_style)
         resendBroadcastButton.pack(side="left", padx=10, pady=10)
 
-        quitButton = tkinter.Button(row4, text="Quit", command=self.master.destroy, **button_style)
+        quitButton = tkinter.Button(row4, text="Quit", command=self.quitApp, **button_style)
         quitButton.pack(side="left", padx = 20, pady=20)
 
         accountButton = tkinter.Button(row4, text=str(self.node.nId), command=self.displayAccount, **button_style)
@@ -83,6 +83,10 @@ class GUI(tkinter.Frame):
         for widgets in self.winfo_children():
             widgets.destroy()
         self.menu()
+        
+    def quitApp(self):
+        self.node.stopNode()
+        self.master.destroy()
         
     def displayAccount(self):
         for widgets in self.winfo_children():

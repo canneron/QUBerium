@@ -579,16 +579,20 @@ class ValNode(Node):
                 if self.txPool.isNotEmpty():
                     # Hold a raffle to see which staker will be the validator for this block
                     # See comments on the PoS class for more information
-                    validator = self.consensus.generateValidator(self.bchain.lastBlock().hash)   
+                    validator = self.consensus.generateValidator(self.bchain.lastBlock().hash)  
+                     
                     if validator == None:
                         messagebox.showerror(str(self.nId), "No Validator Chosen")
                         print("Error: No validator")
                     else:
                         # If this node is the validator continue, otherwise wait for the validator to broadcast the block
                         if (self.wallet.pubKey.e + self.wallet.pubKey.n) == validator:
+                            if self.permissionLvl == "student":
+                                self.wallet.balance += 1
+                            else:
+                                self.wallet.balance += 2
                             # If validator create a new block and add it to the chain
                             newBlock = self.bchain.addLocalBlock(self.txPool.txs, self.wallet)
-                            newBlock.index = 10
                             print("Validator: " + str(self.nId))
                             if newBlock == None:
                                 print("Error - no block created!")
@@ -628,7 +632,7 @@ class ValNode(Node):
                 print(errorMsg)
                 return False
         else:
-            if self.nodeBalances[senderKey] >= tx.amount : 
+            if self.nodeBalances[tx.senderPK] >= tx.amount : 
                 return True
             else:
                 messagebox.showerror(str(self.nId), errorMsg)
@@ -638,7 +642,7 @@ class ValNode(Node):
     # Check each transaction can actually be executed before being added to the block
     # Amount being unstaked should be more than is being staked currently by the user
     def handleSubStakeTx(self, tx, senderKey):
-        if self.consensus[senderKey] >= tx.amount: 
+        if self.consensus[tx.senderPK] >= tx.amount: 
             return True
         else:
             messagebox.showerror(str(self.nId), "Insufficient funds to withdraw")
