@@ -31,8 +31,6 @@ class ValNode(Node):
         self.cmd = False
         self.record = None
         self.reply = False
-        if self.cmd == True:
-            threading.Thread(target=self.keyboardListener).start()
         
         # Dictionaries and lists for node information
         # Holds information on known admin nodes against their IDs
@@ -168,6 +166,8 @@ class ValNode(Node):
                             msg['sId'] = self.nId
                             self.send_to_node(adminnode, msg)
                             print("Request Sent")
+                    if len(admins) == 0:
+                        print("Network error - no administrator nodes online")
                 else:
                     print("Please use search function to find student records")
             # View connected nodes
@@ -196,6 +196,8 @@ class ValNode(Node):
         self.start()
         # Start P2P search
         self.nodeDiscovery()
+        if self.cmd == True:
+            threading.Thread(target=self.keyboardListener).start()
         
     
     def nodeDiscovery(self):
