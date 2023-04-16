@@ -1,5 +1,6 @@
 import json
 import time
+from tkinter import messagebox
 import rsa
 from block import Block
 from blockchain import Blockchain
@@ -27,6 +28,9 @@ class ValNode(Node):
         self.permissionLvl = pLvl
         self.end = False
         self.command = None
+        self.cmd = False
+        self.record = None
+        self.reply = False
         
         # Dictionaries and lists for node information
         # Holds information on known admin nodes against their IDs
@@ -162,6 +166,8 @@ class ValNode(Node):
                             msg['sId'] = self.nId
                             self.send_to_node(adminnode, msg)
                             print("Request Sent")
+                    if len(admins) == 0:
+                        print("Network error - no administrator nodes online")
                 else:
                     print("Please use search function to find student records")
             # View connected nodes
@@ -190,7 +196,9 @@ class ValNode(Node):
         self.start()
         # Start P2P search
         self.nodeDiscovery()
-        threading.Thread(target=self.keyboardListener).start()
+        if self.cmd == True:
+            threading.Thread(target=self.keyboardListener).start()
+        
     
     def nodeDiscovery(self):
         if self.port != 5001:
@@ -329,6 +337,7 @@ class ValNode(Node):
             # If valid, handle the transaction by adding it to the transaction pool
             self.incomingTransaction(tx, msg['tSig'])
         else:
+            messagebox.showerror(str(self.nId), "Invalid Transaction")
             print("Invalid Transaction")
             
     # Handle incoming blocks
@@ -358,9 +367,9 @@ class ValNode(Node):
                     msg = {}
                     msg['type'] = "CHAINREQ"
                     self.send_to_nodes(msg)
+            validatorID = self.nodeKeys[block.validator]
             if valid:
                 # If valid retrieve the ID of the block's validator and reward them for being loyal by increasing their balance
-                validatorID = self.nodeKeys[block.validator]
                 if validatorID in self.knownStudents.keys():
                     self.nodeBalances[validatorID] += 1
                 elif validatorID in self.knownAdmins.keys():
@@ -372,8 +381,11 @@ class ValNode(Node):
                     if blockTx.type == "NEWRECORD" and self.permissionLvl == "admin":
                         record = self.kms.decrypt(blockTx.data.encode('latin-1'))
                         self.recordIndex[record['sId']] = block.index
+                    if blockTx.type == "SENDTOKENS":
+                        sender = str(self.nodeKeys[blockTx.senderPK])
+                        messagebox.showinfo(str(self.nId), "Received " + str(blockTx.amount) + " from " + sender)
                 # Transactions in the block must be removed from the transaction pool
-                
+                messagebox.showinfo(str(self.nId), "New Block Added\nValidator: " + str(validatorID))
                 print ("Validator: " + str(self.nodeKeys[block.validator]))
                 self.txPool.updatePool(block.transactions)
             else:
@@ -384,8 +396,9 @@ class ValNode(Node):
                 msg["type"] = "INVALIDBLOCK"
                 msg["id"] = self.nodeKeys[block.validator]
                 self.send_to_nodes(msg)
-                print(str(msg['id']) + " has produced an invalid block") 
+                print(str(validatorID) + " has produced an invalid block") 
                 print("Their stake has been removed and ID recorded")
+                messagebox.showerror(str(self.nId), "Invalid block detected! - Alerting Chain\n" + str(validatorID) + " has produced an invalid block\nTheir Stake has been removed and ID recorded")
                 for pubKey in self.nodeKeys:
                     if self.nodeKeys[pubKey] == msg['id']:
                         # Node who produced an invalid block is punished by having their stake removed and burned  
@@ -418,6 +431,7 @@ class ValNode(Node):
     def handleInvalidBlock(self, msg):
         print(str(msg['id']) + " has produced an invalid block") 
         print("Their stake has been removed and ID recorded")
+        messagebox.showerror(str(self.nId), "Invalid block detected! - Alerting Chain\n" + str(msg['id']) + " has produced an invalid block\nTheir Stake has been removed and ID recorded")
         for pubKey in self.nodeKeys:
             if self.nodeKeys[pubKey] == msg['id']:  
                 self.consensus.nodes[(pubKey.e + pubKey.n)] = 0
@@ -433,6 +447,28 @@ class ValNode(Node):
         else:
             msg['record'] = result
         self.send_to_node(connected_node, msg)
+        
+    def createNewRecord(self, sd):
+        record = self.wallet.createTransaction(self.wallet.pubKey, 0, "NEWRECORD", sd)
+        msgJson = record.toJson()
+        # Send created transaction to other nodes on network
+        self.send_to_nodes(msgJson)
+        self.incomingTransaction(record, record.tSig)
+        
+    def requestRecords(self):
+        admins = []
+        for adminKeys in self.knownAdmins.keys():
+            admins.append(str(adminKeys))
+        for adminnode in self.all_nodes:
+            if adminnode.id in admins:
+                msg = {}
+                msg["type"] = "RECORDRQ"
+                msg['sId'] = self.nId
+                self.send_to_node(adminnode, msg)
+                print("Request Sent")
+    
+    def getStudentRecord(self):
+        return self.record
         
     # Function for printing student records
     def printRecords(self, record):
@@ -451,7 +487,9 @@ class ValNode(Node):
         if record == None:
             print("Records not found - please contact administrator")
         else:
+            self.record = record
             self.printRecords(record)
+        self.reply = True
             
     def validateValidator(self, msg, connected_node):
         blockTxs = []
@@ -488,6 +526,7 @@ class ValNode(Node):
                 self.send_to_nodes(msg)
                 print(str(msg['id']) + " has produced an invalid block") 
                 print("Their stake has been removed and ID recorded")
+                messagebox.showerror(str(self.nId), "Invalid block detected! - Alerting Chain\n" + str(msg['id']) + " has produced an invalid block\nTheir Stake has been removed and ID recorded")
                 for pubKey in self.nodeKeys:
                     if self.nodeKeys[pubKey] == msg['id']:
                         # Node who produced an invalid block is punished by having their stake removed and burned  
@@ -542,17 +581,24 @@ class ValNode(Node):
                 if self.txPool.isNotEmpty():
                     # Hold a raffle to see which staker will be the validator for this block
                     # See comments on the PoS class for more information
-                    validator = self.consensus.generateValidator(self.bchain.lastBlock().hash)   
+                    validator = self.consensus.generateValidator(self.bchain.lastBlock().hash)  
+                     
                     if validator == None:
+                        messagebox.showerror(str(self.nId), "No Validator Chosen")
                         print("Error: No validator")
                     else:
                         # If this node is the validator continue, otherwise wait for the validator to broadcast the block
                         if (self.wallet.pubKey.e + self.wallet.pubKey.n) == validator:
+                            if self.permissionLvl == "student":
+                                self.wallet.balance += 1
+                            else:
+                                self.wallet.balance += 2
                             # If validator create a new block and add it to the chain
                             newBlock = self.bchain.addLocalBlock(self.txPool.txs, self.wallet)
                             print("Validator: " + str(self.nId))
                             if newBlock == None:
                                 print("Error - no block created!")
+                                messagebox.showerror(str(self.nId), "No Block Creaed")
                             else:
                                 # Handle each transaction in the block by executing it's function
                                 for blockTx in newBlock.transactions:
@@ -584,21 +630,24 @@ class ValNode(Node):
             if self.wallet.balance >= tx.amount : 
                 return True
             else:
+                messagebox.showerror(str(self.nId), errorMsg)
                 print(errorMsg)
                 return False
         else:
-            if self.nodeBalances[senderKey] >= tx.amount : 
+            if self.nodeBalances[tx.senderPK] >= tx.amount : 
                 return True
             else:
+                messagebox.showerror(str(self.nId), errorMsg)
                 print("errorMsg")
                 return False
     
     # Check each transaction can actually be executed before being added to the block
     # Amount being unstaked should be more than is being staked currently by the user
     def handleSubStakeTx(self, tx, senderKey):
-        if self.consensus[senderKey] >= tx.amount: 
+        if self.consensus[tx.senderPK] >= tx.amount: 
             return True
         else:
+            messagebox.showerror(str(self.nId), "Insufficient funds to withdraw")
             print("Insufficient funds to withdraw")
             return False
         
@@ -626,6 +675,7 @@ class ValNode(Node):
             elif tx.type == "NEWRECORD":
                 isValidTx = True
         else:
+            messagebox.showerror(str(self.nId), "Sender or receiver not found")
             print("Sender or receiver not found")
         
         return isValidTx
@@ -679,6 +729,7 @@ class ValNode(Node):
                 else:
                     # If the chain is invalid the stake is removed as this node may be a risk of being untrustworthy
                     print("Invalid chain - Stake removed")
+                    messagebox.showerror(str(self.nId), "Invalid chain - stake removed")
                     self.consensus.nodes[(self.wallet.pubKey.e + self.wallet.pubKey.e)] = 0
                     msg = {}
                     msg["type"] = "INVALIDCHAIN"
