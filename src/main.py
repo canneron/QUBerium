@@ -15,7 +15,7 @@ if __name__ == '__main__':
     port = int(sys.argv[2])
     pmLvl = sys.argv[3]
     id = int(sys.argv[4])
-    gui = sys.argv[4]
+    gui = sys.argv[5]
     if gui == "cmd" or gui == "CMD":  
         node = ValNode(ip, port, pmLvl, id)
         node.cmd = True

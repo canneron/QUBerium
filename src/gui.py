@@ -4,6 +4,7 @@ import textwrap
 import threading
 import time
 import tkinter
+from tkinter import messagebox
 from studentdata import StudentData 
 from valnode import ValNode
 
@@ -68,7 +69,7 @@ class GUI(tkinter.Frame):
         resendBroadcastButton = tkinter.Button(row3, text="Resend Broadcast", command=self.resendBroadcast, **button_style)
         resendBroadcastButton.pack(side="left", padx=10, pady=10)
 
-        quitButton = tkinter.Button(row4, text="Quit", command=self.master.destroy, **button_style)
+        quitButton = tkinter.Button(row4, text="Quit", command=self.quitApp, **button_style)
         quitButton.pack(side="left", padx = 20, pady=20)
 
         accountButton = tkinter.Button(row4, text=str(self.node.nId), command=self.displayAccount, **button_style)
@@ -83,6 +84,10 @@ class GUI(tkinter.Frame):
         for widgets in self.winfo_children():
             widgets.destroy()
         self.menu()
+        
+    def quitApp(self):
+        self.node.stopNode()
+        self.master.destroy()
         
     def displayAccount(self):
         for widgets in self.winfo_children():
@@ -175,20 +180,23 @@ class GUI(tkinter.Frame):
         for key in self.node.nodeKeys:
             if receiver == str(self.node.nodeKeys[key]):
                 # Create transaction and send it to other nodes
-                t = self.node.wallet.createTransaction(key, int(amount), "SENDTOKENS")
-                self.node.incomingTransaction(t, t.tSig)
-                msgJson = t.toJson()
-                self.node.send_to_nodes(msgJson)
                 found = True
-                for widgets in self.winfo_children():
-                    widgets.destroy()
-                label = tkinter.Label(self, text="Transaction Sent!", relief=tkinter.RAISED)
-                label.pack()
+                t = self.node.wallet.createTransaction(key, int(amount), "SENDTOKENS")
+                if self.node.checkTxValid(t):
+                    self.node.incomingTransaction(t, t.tSig)
+                    msgJson = t.toJson()
+                    self.node.send_to_nodes(msgJson)
+                    for widgets in self.winfo_children():
+                        widgets.destroy()
+                    label = tkinter.Label(self, text="Transaction Sent!", relief=tkinter.RAISED)
+                    label.pack()
                 self.amount.set("")
                 self.receiver.set("")
                 returnButton = tkinter.Button(self, text="Return To Menu", command=self.returnToMenu)
                 returnButton.pack()
                 break
+        if found == False:
+            messagebox.showerror(str(self.node.nId), "Receiver not found")
         
     def createRecord(self):
         for widgets in self.winfo_children():
