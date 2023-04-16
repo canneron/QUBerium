@@ -34,51 +34,48 @@ For more information on versioning see requirements.txt
 ## Usage
 ADDING A NEW RECORD
 Prerequisite: Must be logged in as an administrator.
-
-1.	Enter ‘newrecord’ when prompted.
-a.	If you are logged in as a student you should see “Insufficient Privilege” on the console
-2.	 Enter student details when prompted.
-a.	Enter the student’s forename.
-b.	Enter the student’s surname.
-c.	Enter the student’s ID.
-3.	For each of the modules and grades, add another by entering ‘Y’ when prompted, or ‘N’ to finish.
-4.	The user should see the string representation of the validator’s public key printed to the console.
-5.	When the message ‘New Record Added’ is displayed on the console the record has been added to the chain. Otherwise, if the block is deemed invalid:
-a.	The message ‘Invalid Block’ will be displayed, meaning that the block storing the new record has an issue.
-b.	If the block has been tampered with, the perpetrator’s ID will be printed to the console.
-c.	The reason for the block’s failure will also be printed e.g., “Invalid Hash”.
-6.	To verify the correctness of the operation, enter ‘blockchain’ in the command prompt.
-7.	The block’s data will be encrypted but the index and block information viewable as the newest block on the chain.
-8.	To check student data is correct use the search function, see section 5.2.
+1.	From the menu select the ‘Create Record’ button.
+2.	Enter the student’s information in the form provided.
+    a.	If extra space is needed to enter more modules and grades, press the ‘+’ button.
+3.	Once all records have been entered press ‘Submit’
+4.	The fields should then go blank, and the command line should print ‘New record added’.
+5.	To validate success, navigate back to the menu using ‘Return to Menu’.
+6.	Select ‘Blockchain’
+7.	Select the newest block.
+8.	Verify that details of your transaction have been added.
+    a.	Note, the record will be encrypted. To confirm the data has been entered correctly, search for the student’s records.
 ----------------------------------------------------------------------------------------------------------------------
 SEARCHING FOR A STUDENT’S RECORD
 Prerequisite: Must be logged in as an administrator.
 
-1.	Enter ‘search’ when ‘Enter A Command:’ is displayed on the console.
-a.	If you are logged in as a student you should see “Insufficient Privilege” on the console
-2.	Enter the student’s ID when prompted.
-3.	If the student’s ID is stored on the blockchain then the record will be printed to the console
-a.	Otherwise, if no such student can be found “Student Record Not Found” will be printed
+1.	Select the ‘Search’ button.
+2.	Enter the student’s ID in the box presented.
+3.	Select ‘Submit’ when ready.
+4.	The student’s records should now be displayed if they exist. Otherwise, a popup will be displayed informing the user of an error.
+
 ----------------------------------------------------------------------------------------------------------------------
 VIEWING YOUR RECORD AS A STUDENT
 Prerequisite: Must be logged in as a student.
 
-1.	Enter ‘myrecords’ when ‘Enter A Command:’ is displayed on the console.
-a.	If you are logged in as an administrator, the user should see “Please Use The Search Function To Find Student Records” on the console
-2.	If the request is sent successfully the user will see “Request Sent” on the terminal
-3.	If found by the administrator node, the records will then be sent back to the user and printed
-a.	Otherwise, “Records Not Found – Please Contact Administrator” will be displayed.
+1.	Select ‘My Records’ from the main menu.
+2.	The student records should now be displayed.
+    a.	If not, you may see a ‘Retrieving’ label. The software is waiting for the users records to be returned and this may take a moment.
+    b.	If the records cannot be found, ‘Records not found – please contact and administrator’ should be displayed and the instructions followed.
+
 ----------------------------------------------------------------------------------------------------------------------
 SENDING TOKENS TO OTHER NODES
-1.	Enter ‘transaction’ when prompted.
-2.	The users balance will be displayed along with a prompt asking how much to send. Enter the desired amount.
-3.	The terminal will then prompt the user for the ID of the user who will be receiving the tokens, enter this value into the terminal.
-a.	If the ID is not known to the user, “Receiver ID Not Found” will be printed.
-4.	To verify the transaction has been sent, enter ‘blockchain’ on the terminal.
-5.	The latest block in the blockchain should contain the transaction that has just been created.
-6.	To verify that it has executed correctly, enter ‘balances’.
-7.	The user’s balance should be their previous balance minus the amount sent.
-8.	The receiver’s balance should be their previous balance plus the amount received
+1.	From the main menu select ‘Send Tokens’
+2.	Enter the amount you want to send.
+3.	Enter the ID of the person you want to send the tokens to.
+4.	Select ‘Submit’ when ready.
+5.	Upon success a ‘Success!’ popup will be displayed, otherwise one will see an error message popup.
+6.	To verify success, navigate back to the main menu using ‘Return To Menu’.
+7.	Select the ‘Balances’ button.
+8.	The balance of each connected node will be displayed. Verify the correct amount has been deducted from one’s balance and been added to the recipient.
+    a.	NB. The balance of one of the nodes may differ slightly, as if chosen to be validator and they produce a successful block to store the transaction they will be rewarded in tokens.
+9.	Navigate back to the main menu and select ‘Blockchain’
+10.	Select the latest block and confirm the transaction stored inside is correct.
+
 
 ## Authors and acknowledgment
 Author: Cameron McGreevy
