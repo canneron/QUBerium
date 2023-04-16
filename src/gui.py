@@ -4,7 +4,6 @@ import textwrap
 import threading
 import time
 import tkinter
-from popup import Popup
 from studentdata import StudentData 
 from valnode import ValNode
 
@@ -45,7 +44,7 @@ class GUI(tkinter.Frame):
         blockchainButton = tkinter.Button(row1, text="Blockchain", command=self.displayChain, **button_style)
         blockchainButton.pack(side="left", padx=10, pady=10)
         
-        txPoolButton = tkinter.Button(row1, text="Transaction Pool", command=self.displayTxPool, **button_style)
+        txPoolButton = tkinter.Button(row1, text="Staking Pool", command=self.displayStakingPool, **button_style)
         txPoolButton.pack(side="left", padx=10, pady=10)
         
         balanceButton = tkinter.Button(row1, text="Balance", command=self.displayBalances, **button_style)
@@ -126,20 +125,17 @@ class GUI(tkinter.Frame):
         returnButton = tkinter.Button(self, text="Return To Menu", command=self.displayChain)
         returnButton.pack()
             
-    def displayTxPool(self):
+    def displayStakingPool(self):
         for widgets in self.winfo_children():
             widgets.destroy()
-        if self.node.txPool.isNotEmpty():
-            for tx in self.node.txPool:
-                x = tx.toJson()
-                string = json.loads(x)
-                string = json.dumps(string, indent=4)
-                string = textwrap.fill(string, width = 200)
-                label = tkinter.Label(self, text=string, relief=tkinter.RAISED)
-                label.pack()
-        else:
-            label = tkinter.Label(self, text="Pool is empty", relief=tkinter.RAISED)
-            label.pack()
+        label = tkinter.Label(self, text="Balances", relief=tkinter.RAISED)
+        label.pack()
+        for node in self.node.consensus.nodes:
+            for pk in self.node.nodeKeys:
+                if node == pk.e + pk.n:  
+                    string = str(self.node.nodeKeys[pk]) + ": " + str(self.node.consensus.nodes[node])
+                    label = tkinter.Label(self, text=string, relief=tkinter.RAISED)
+                    label.pack()
         returnButton = tkinter.Button(self, text="Return To Menu", command=self.returnToMenu)
         returnButton.pack()
             
@@ -193,8 +189,6 @@ class GUI(tkinter.Frame):
                 returnButton = tkinter.Button(self, text="Return To Menu", command=self.returnToMenu)
                 returnButton.pack()
                 break
-        if found == False:
-            Popup("Error!")
         
     def createRecord(self):
         for widgets in self.winfo_children():

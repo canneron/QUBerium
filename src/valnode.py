@@ -114,9 +114,9 @@ class ValNode(Node):
                     if receiver == self.nodeKeys[key]:
                         # Create transaction and send it to other nodes
                         t = self.wallet.createTransaction(key, amount, "SENDTOKENS")
-                        self.incomingTransaction(t, t.tSig)
                         msgJson = t.toJson()
                         self.send_to_nodes(msgJson)
+                        self.incomingTransaction(t, t.tSig)
                         break
                 print ("Receiver ID not found")
             # Create a new record to add to the chain
@@ -138,10 +138,10 @@ class ValNode(Node):
                     # Hold student data in an object
                     sd = StudentData(fname, sname, id, modulegrades)
                     record = self.wallet.createTransaction(self.wallet.pubKey, 0, "NEWRECORD", sd)
-                    self.incomingTransaction(record, record.tSig)
                     msgJson = record.toJson()
                     # Send created transaction to other nodes on network
                     self.send_to_nodes(msgJson)
+                    self.incomingTransaction(record, record.tSig)
                 else:
                     print("Insufficient privilege")
             # Allows admins to search for a students records
@@ -335,11 +335,7 @@ class ValNode(Node):
             # If valid, handle the transaction by adding it to the transaction pool
             self.incomingTransaction(tx, msg['tSig'])
         else:
-            win = tkinter.Tk()
-            top= tkinter.Toplevel(win)
-            top.geometry("250x250")
-            top.title("Transaction")
-            tkinter.Label(top, text= "Invalid Transaction", font=('Arial')).place(x=80,y=80)
+            messagebox.showinfo("Invalid Transaction")
             
     # Handle incoming blocks
     def handleBlockMessage(self, msg):
@@ -368,9 +364,9 @@ class ValNode(Node):
                     msg = {}
                     msg['type'] = "CHAINREQ"
                     self.send_to_nodes(msg)
+            validatorID = self.nodeKeys[block.validator]
             if valid:
                 # If valid retrieve the ID of the block's validator and reward them for being loyal by increasing their balance
-                validatorID = self.nodeKeys[block.validator]
                 if validatorID in self.knownStudents.keys():
                     self.nodeBalances[validatorID] += 1
                 elif validatorID in self.knownAdmins.keys():
@@ -389,9 +385,10 @@ class ValNode(Node):
                 # Transactions in the block must be removed from the transaction pool
                 self.txPool.updatePool(block.transactions)
             else:
+                print("there")
                 # If block is invalid alert the other nodes of the ID of the validator who produced it
                 # This ID is publicly displayed and added to a list for university authorities to deal with
-                messagebox.showerror("Error", "Invalid block detected! - Alerting Chain\n" + str(msg['id']) + " has produced an invalid block\nTheir stake has been removed and ID recorded")
+                messagebox.showerror("Error", "Invalid block detected! - Alerting Chain\n" + str(validatorID) + " has produced an invalid block\nTheir stake has been removed and ID recorded")
                 print("Invalid block detected! - Alerting Chain")
                 msg = {}
                 msg["type"] = "INVALIDBLOCK"
@@ -439,10 +436,10 @@ class ValNode(Node):
         
     def createNewRecord(self, sd):
         record = self.wallet.createTransaction(self.wallet.pubKey, 0, "NEWRECORD", sd)
-        self.incomingTransaction(record, record.tSig)
         msgJson = record.toJson()
         # Send created transaction to other nodes on network
         self.send_to_nodes(msgJson)
+        self.incomingTransaction(record, record.tSig)
     
     # When admins receive a request from students to send their decrypted records the admin must search for the student and then send them back
     def handleRecordRequest(self, msg, connected_node):
@@ -540,6 +537,7 @@ class ValNode(Node):
             
     # Handles incoming messages
     def node_message(self, connected_node, msg):
+        print(msg['type'])
         if msg['type'] == "NEWNODE":
             self.newNode(msg)
         elif msg['type'] == "SENDTOKENS" or msg['type'] == "ADDSTAKE" or msg['type'] == "SUBSTAKE" or msg['type'] == "NEWSTAKE" or msg['type'] == "NEWRECORD":
@@ -584,6 +582,8 @@ class ValNode(Node):
                 if self.txPool.isNotEmpty():
                     # Hold a raffle to see which staker will be the validator for this block
                     # See comments on the PoS class for more information
+                    print(self.consensus.nodes)
+                    print(self.bchain.lastBlock().hash)
                     validator = self.consensus.generateValidator(self.bchain.lastBlock().hash)   
                     if validator == None:
                         messagebox.showerror("Error", "No valiator chosen")
@@ -593,6 +593,7 @@ class ValNode(Node):
                         if (self.wallet.pubKey.e + self.wallet.pubKey.n) == validator:
                             # If validator create a new block and add it to the chain
                             newBlock = self.bchain.addLocalBlock(self.txPool.txs, self.wallet)
+                            newBlock.index = 10
                             print("Validator: " + str(self.nId))
                             messagebox.showinfo("Success", "New Block Added")
                             if newBlock == None:
