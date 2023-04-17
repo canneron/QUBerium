@@ -1,3 +1,4 @@
+from tkinter import messagebox
 import rsa
 from block import Block
 from transaction import Transaction
@@ -46,6 +47,7 @@ class Wallet:
             if rsa.verify(data, bytes.fromhex(sig), sigPubKey) == "SHA-256":
                 return True
         except:
+            messagebox.showerror("Error", "Invalid Signature!")
             print("Invalid Siganture!")
             return False
     
@@ -54,5 +56,6 @@ class Wallet:
         if self.balance + amount > 0:
             self.balance += amount
         else:
+            messagebox.showerror("Error", "Balance cannot go below 0")
             print ("Balance cannot go below 0")
 

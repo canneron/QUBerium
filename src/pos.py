@@ -1,4 +1,5 @@
 from hashlib import sha256
+from tkinter import messagebox
 
 # This class contains the consensus mechanism used to secure the chain
 # A raffle is held based on the number of stakes each node has using the previous block's hash as a seed and a winner is generated
@@ -16,6 +17,7 @@ class PoS:
         if key not in list(self.nodes.keys()):
             self.nodes[key] = stake
         else:
+            messagebox.showerror("Error", "Node already in staking pool!")
             print ("Node already in staking pool")
         
     def addStake(self, validator, stake):
@@ -23,6 +25,7 @@ class PoS:
         if key in list(self.nodes.keys()):
             self.nodes[key] += stake
         else:
+            messagebox.showerror("Error", "Node not in staking pool!")
             print ("Node not in staking pool")
             
     def subStake(self, validator, stake):
@@ -30,6 +33,7 @@ class PoS:
         if key in list(self.nodes.keys()):
             self.nodes[key] -= stake
         else:
+            messagebox.showerror("Error", "Node not in staking pool!")
             print ("Node not in staking pool")
             
     def getStake(self, val):
